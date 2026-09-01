@@ -34,6 +34,14 @@ yield is capped at what safe collateral earns — **~3%**, per the project's own
 table. Any yield materially above that must come from new capital, from other holders'
 principal, or from a token price the issuer's own buyback sets in a **$2.1M float**.
 
+**On prior art.** PeckShield audited the Escrow in October 2025 (report 2025-170) and
+found only 2 Low issues — one of which is my E-01, the escrow admin-key problem. It is
+therefore **not novel**; I re-flag it because I think Low underrates it for a sale
+contract, and because PeckShield's recommendation was *disclosure* rather than a code
+fix. I did find one thing they did not: **the deployed source no longer matches the
+audited checksum** (E-09), while the README still claims the file is preserved "to keep
+the audited source exactly."
+
 ### The three things I would want answered before putting capital in
 
 1. **Where are the other 8.8B FT?** Docs say 10B fixed supply. Chain says **1.199B**.
@@ -50,21 +58,33 @@ principal, or from a token price the issuer's own buyback sets in a **$2.1M floa
 
 ### Contract-level
 
-| ID | Finding | Severity | Contract |
+| ID | Finding | Severity | Contract | Prior art |
+|---|---|---|---|---|
+| **E-01** | `withdraw()` bypasses the FT gate — owner can reclaim the recipient's FT | **High** | Escrow | PeckShield PVE-002 (Low) |
+| **FT-01** | Pause is one-directional: configurator keeps full transfer ability | **High** | FT | their AUDIT.md Q-2 (Low) |
+| **FT-02** | Entire 10B premined to configurator; deployed paused | Medium | FT | by design |
+| **E-09** | Deployed source ≠ audited source; README claims it is preserved | Medium | Escrow | — |
+| **E-02** | No on-chain FT↔denomination rate; uncapped, repeatable `withdrawFT` | Medium | Escrow | — |
+| **E-03** | `withdrawFT` bricked while FT paused (team-controlled kill switch) | Medium | Escrow | — |
+| **FT-03** | `setName`/`setSymbol` mutate domain separator + enable identity spoofing | Medium | FT | their AUDIT.md I-3 (Info) |
+| **FT-04** | Users cannot burn while paused; configurator can | Low | FT | — |
+| **FT-05** | Two `permit` overloads share one nonce space (griefing surface) | Low | FT | — |
+| **E-04** | Funding gate is a monotonic high-water mark; no recipient protection | Low | Escrow | — |
+| **E-05** | Hardcoded FT address wrong on all testnets; unrecoverable | Low | Escrow | — |
+| **E-06** | No events emitted anywhere | Low | Escrow | — |
+| **E-07** | Blacklistable / non-standard denomination tokens | Low | Escrow | PeckShield PVE-001 |
+| **E-08** | No timeout or refund path for the recipient | Info | Escrow | — |
+
+### Prior audits on record
+
+| Target | Auditor | Date | Result |
 |---|---|---|---|
-| **E-01** | `withdraw()` bypasses the FT gate — owner can reclaim the recipient's FT | **High** | Escrow |
-| **FT-01** | Pause is one-directional: configurator keeps full transfer ability | **High** | FT |
-| **FT-02** | Entire 10B premined to configurator; deployed paused | Medium | FT |
-| **E-02** | No on-chain FT↔denomination rate; uncapped, repeatable `withdrawFT` | Medium | Escrow |
-| **E-03** | `withdrawFT` bricked while FT paused (team-controlled kill switch) | Medium | Escrow |
-| **FT-03** | `setName`/`setSymbol` mutate domain separator + enable identity spoofing | Medium | FT |
-| **FT-04** | Users cannot burn while paused; configurator can | Low | FT |
-| **FT-05** | Two `permit` overloads share one nonce space (griefing surface) | Low | FT |
-| **E-04** | Funding gate is a monotonic high-water mark; no recipient protection | Low | Escrow |
-| **E-05** | Hardcoded FT address wrong on all testnets; unrecoverable | Low | Escrow |
-| **E-06** | No events emitted anywhere | Low | Escrow |
-| **E-07** | Blacklistable / non-standard denomination tokens | Low | Escrow |
-| **E-08** | No timeout or refund path for the recipient | Info | Escrow |
+| **FT Escrow** | **PeckShield** (report 2025-170, v1.0-rc) | 2025-10-06 | **0 Critical · 0 High · 0 Medium · 2 Low** |
+| FT token | internal `AUDIT.md` in `ft` repo | — | 1 Medium (Q-1, deploy script) · 1 Low (Q-2) · 3 Info |
+| Full protocol | **Sherlock bug bounty** only | ongoing | no published public report |
+
+Note the gap: the only third-party source-reviewed component is a **50-line helper
+escrow**. The contract holding all user collateral has no published audit.
 
 ### Economic
 
@@ -110,6 +130,22 @@ Avalanche, Sonic).
 **4 of the 5 owner signers are also configurator signers.** The apparent separation
 between the role that can freeze the token and the role exempt from the freeze is
 largely cosmetic — and the exempt role holds **54% of supply**.
+
+### Audit-integrity check (E-09)
+
+PeckShield recorded the checksum of the Escrow source it reviewed. It does not match what
+is in the repo today:
+
+| | Hash |
+|---|---|
+| Audited (PeckShield 2025-170) | `sha256 da6e16ae…90a8b5664` |
+| Current `src/Escrow.sol` | `sha256 2f28e7dd…1f76c635` |
+
+The visible delta is `transfer(...)` → `safeTransfer(...)` — almost certainly the fix for
+PVE-001 (non-ERC20-compliant tokens), i.e. a *good* change. The issue is that the README
+still says the file is excluded from formatting "to preserve the **audited source
+exactly**." It does not. Anyone checking "was this exact file audited?" is misled, and no
+updated report in `audits/` covers the new hash.
 
 ---
 
@@ -204,13 +240,16 @@ Worth stating, because this structure is more honest than most:
 1. Open-source `PutManager` and the strategy layer. A bug bounty is not a substitute for
    public review of the contract holding 100% of user collateral.
 2. Fix `Escrow.withdraw()` — exclude FT, add an immutable `ftAmount` and a `claimed` flag.
+   PeckShield recommended *disclosure* for this (PVE-002); it is fixable in code instead.
 3. Narrow the configurator's pause exemption to `from == configurator`; drop the
    open-ended `msg.sender == configurator` branch.
-4. Publish the reconciliation from 10B to 1.199B FT, and the size of the
+4. Publish a re-audit or delta letter against `sha256 2f28e7dd…1f76c635`, or drop the
+   README's "preserve the audited source exactly" claim (E-09).
+5. Publish the reconciliation from 10B to 1.199B FT, and the size of the
    Foundation/Team/Incentives allocations.
-5. Either retract the 7-8% figure or state plainly that it is a Stage 3+ target not
+6. Either retract the 7-8% figure or state plainly that it is a Stage 3+ target not
    achievable with the deployed Aave wrapper.
-6. Put a hard cap on queued/unbonding backing assets, and disclose the cap.
+7. Put a hard cap on queued/unbonding backing assets, and disclose the cap.
 
 **For anyone considering capital**
 - The put protects **par**, not purchasing power and not opportunity cost. Exiting at par

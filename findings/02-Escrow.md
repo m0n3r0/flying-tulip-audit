@@ -2,6 +2,31 @@
 
 Source: `github.com/flyingtulipdotcom/escrow`, `src/Escrow.sol` (50 LoC).
 
+### Prior audit — PeckShield, report 2025-170, v1.0-rc, 2025-10-06
+
+The repo ships `audits/*.pdf`: **PeckShield**, "Smart Contract Audit Report for Flying
+Tulip (FT) Escrow". Result: **Critical 0 · High 0 · Medium 0 · Low 2 · Info 0**.
+
+| ID | Title | Severity |
+|---|---|---|
+| PVE-001 | Accommodation of Non-ERC20-Compliant Tokens | Low |
+| **PVE-002** | **Trust Issue of Admin Keys** (CWE-287) | **Low** (Likelihood Low / Impact Medium) |
+
+PeckShield's PVE-002 covers what I call E-01 below: they quote `withdraw()` and
+`withdrawDenom()` and note *"the extra power to these privileged accounts may also be a
+**counter-party risk to the escrow-affected recipient**."* Their recommendation was only
+to *"explicitly inform the involved recipient about the presence and capability of the
+privileged owner account"* — i.e. **disclosure, not a code fix.**
+
+So E-01 is **not novel**. What I add is the sharper framing: the contract's single
+headline guarantee is enforced on the wrong function, making it a concrete bypass rather
+than a generic "admins are powerful" note — and I argue Low underrates it for a sale
+contract.
+
+⚠️ **The current source no longer matches the audited source** — see **E-09**.
+
+---
+
 This is the contract used to swap FT for the contribution asset in the sale. Per the
 repo's own README:
 
@@ -37,7 +62,8 @@ what the contract *appears* to guarantee (an escrow) and what it *actually* guar
 
 ## E-01 — `withdraw()` bypasses the FT gate entirely: the owner can reclaim the recipient's FT
 
-**Severity: High (if the escrow is relied on as protection) · Low/Info if "trusted" is truly accepted**
+**Severity: High (if the escrow is relied on as protection) · Low if "trusted" is truly accepted**
+**Previously reported: PeckShield PVE-002, rated Low — recommendation was disclosure, not a fix**
 
 The only guard in `withdraw` is `token != address(denomination)`. **FT is not the
 denomination**, so:
@@ -200,18 +226,59 @@ can simply never send the FT.
 
 ---
 
+## E-09 — The deployed source no longer matches the audited source
+
+**Severity: Medium (process / audit-integrity)**
+
+PeckShield's report records the checksum of the artefact it reviewed:
+
+```
+md5     413bba6a92c9d317855979e49c9dcb49
+sha256  da6e16ae3b16848d4086f2bed322bc75354b1cc9fb8baad8f5dcefb90a8b5664
+```
+
+Current `src/Escrow.sol`:
+
+```
+md5     8e50a326315a0456be1550c733fce52d
+sha256  2f28e7dd7b1722ff33e384e9702006f23c865de9875a442ba286e56d1f76c635
+```
+
+**They do not match.** The visible diff is the fix for PVE-001 — PeckShield's listing 3.3
+shows `IERC20(token).transfer(owner, amount)` and `denomination.transfer(...)`, while the
+current code uses `safeTransfer(...)` with OpenZeppelin `SafeERC20`. Line numbers shift
+accordingly (audited L28–36 → current L35–43).
+
+That change is very likely correct and benign — adopting `SafeERC20` is the standard fix
+for non-ERC20-compliant tokens. The problem is the **provenance claim**. The README
+states:
+
+> "Note: `src/Escrow.sol` is excluded from `forge fmt` to **preserve the audited source
+> exactly**."
+
+That is now false. The file changed after the audit, and the repo still presents it as
+the audited artefact. Anyone verifying "was this exact file audited?" gets the wrong
+answer. There is no updated report in `audits/` matching the new hash.
+
+**Recommendation.** Publish the re-audit (or a delta letter) against
+`sha256 2f28e7dd…76c635`, or revert the README claim. Do not let an audit badge imply
+coverage of code that postdates it.
+
+---
+
 ## Summary
 
-| ID | Finding | Severity |
-|---|---|---|
-| E-01 | `withdraw()` bypasses the FT gate; owner can reclaim recipient's FT | **High** |
-| E-02 | No on-chain FT↔denomination rate; no cap; repeatable `withdrawFT` | Medium |
-| E-03 | `withdrawFT` bricked while FT paused (team-controlled kill switch) | Medium |
-| E-04 | Funding gate is a monotonic high-water mark; no recipient protection | Low |
-| E-05 | Hardcoded FT address wrong on all testnets; unrecoverable | Low |
-| E-06 | No events emitted | Low |
-| E-07 | Blacklistable / non-standard denomination tokens | Low |
-| E-08 | No timeout or refund path | Info |
+| ID | Finding | Severity | Prior art |
+|---|---|---|---|
+| E-01 | `withdraw()` bypasses the FT gate; owner can reclaim recipient's FT | **High** | PeckShield PVE-002 (rated Low) |
+| **E-09** | **Deployed source ≠ audited source; README claims otherwise** | **Medium** | — |
+| E-02 | No on-chain FT↔denomination rate; no cap; repeatable `withdrawFT` | Medium | — |
+| E-03 | `withdrawFT` bricked while FT paused (team-controlled kill switch) | Medium | — |
+| E-04 | Funding gate is a monotonic high-water mark; no recipient protection | Low | — |
+| E-05 | Hardcoded FT address wrong on all testnets; unrecoverable | Low | — |
+| E-06 | No events emitted | Low | — |
+| E-07 | Blacklistable / non-standard denomination tokens | Low | PeckShield PVE-001 |
+| E-08 | No timeout or refund path | Info | — |
 
 **Bottom line:** this is not an escrow. It is a custodial arrangement in which the
 owner can unilaterally take both sides of the trade. The README says so, but the

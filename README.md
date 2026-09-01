@@ -13,6 +13,9 @@ Date: 2026-09-02.
 2. **Best contract finding: `Escrow.withdraw()` bypasses the contract's only
    protection.** It excludes just the denomination token, so the owner can withdraw the
    FT deposited for the investor. The "escrow" is one-sided custody.
+   *(Prior art: PeckShield PVE-002, rated Low — they recommended disclosure, not a fix.)*
+   Also new: **the deployed source no longer matches the audited checksum (E-09)**, while
+   the README still claims it is preserved "to keep the audited source exactly."
 3. **The yield reasoning has a hard ceiling.** If principal is truly never spent and
    unlevered, yield is at most the ~3% the collateral earns (their own benchmark
    table), minus the team's operating budget, which takes **first call**. Realistic
