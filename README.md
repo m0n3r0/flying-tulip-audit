@@ -5,6 +5,55 @@ Date: 2026-09-02.
 
 **Start here:** [`reports/FINAL_REPORT.md`](reports/FINAL_REPORT.md)
 
+## System at a glance
+
+The whole structure, with the trust boundary marked. Everything in red is code the
+public cannot read — including the contract that holds 100% of the backing capital.
+
+```mermaid
+flowchart TB
+    INV["Investor contributes<br/>USDC / ETH / SOL / USDe"]
+
+    subgraph OPEN["PUBLIC - OPEN SOURCE - reviewable"]
+        ESC["Escrow.sol - 50 LoC<br/>Team funds FT<br/>Investor funds denomination"]
+        FTC["FT.sol - 370 LoC<br/>ERC20 + LayerZero OFT + Permit"]
+    end
+
+    subgraph CLOSED["CLOSED SOURCE - not reviewable"]
+        PM["PutManager<br/>custodies 100% of backing capital"]
+        STRAT["AaveStrategy, YieldClaimer<br/>LeverageRfqEngine, CircuitBreaker<br/>pFTMarketplace, PositionsManager"]
+    end
+
+    BACK["Backing capital<br/>Aave / stETH / jupSOL / AVAX / sUSDe"]
+    PUT["ftPUT NFT<br/>perpetual American put struck at par"]
+    TREAS["Protocol treasury"]
+    OPEX["Ecosystem budget<br/>salaries, marketing, infra, ops"]
+    BURN["Buyback and burn FT"]
+
+    INV --> ESC
+    ESC -->|"FT delivered"| FTC
+    FTC --> PUT
+    FTC -.->|"54% of supply"| PM
+    PM --> BACK
+    BACK -->|"native yield ~3%"| TREAS
+    TREAS ==>|"FIRST CALL"| OPEX
+    TREAS -->|"residual only"| BURN
+    BURN -.->|"bid into a 2.1M float"| FTC
+
+    style OPEN fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style CLOSED fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    class INV neutral
+    class BACK,PUT,TREAS neutral
+    class OPEX,BURN warn
+```
+
+**Read that diagram as the pitch:** capital goes in, is never spent, earns yield, and the
+yield buys back FT. The four headline conclusions are all failures of specific edges in
+it — the closed-source box, the `FIRST CALL` edge, the `residual` edge, and the supply
+number behind `FT.sol`.
+
 ## Headline conclusions
 
 1. **The published code is fine; the important code is not published.** `FT.sol` is
@@ -32,6 +81,30 @@ Date: 2026-09-02.
 - `findings/03-economics-high-yield.md` — the yield critique
 - `contracts/` — upstream source (cloned from `github.com/flyingtulipdotcom`)
 - `scripts/keccak.py` — pure-Python keccak-256 used to verify EIP-712 typehashes
+- `scripts/lint_mermaid.py` — dependency-free linter for the diagrams in these docs
+
+## Reading the diagrams
+
+There are 36 Mermaid diagrams across these documents. They are colour-coded, and the
+colours are the argument:
+
+| Colour | Meaning |
+|---|---|
+| **green** | Holds up — verified, or a genuine strength |
+| **blue** | The project's own claim, stated as claimed |
+| **amber** | Conditionally true, or a caveat that materially limits the claim |
+| **red** | Broken, false, or a vulnerability |
+| **purple** | Closed source — cannot be verified either way |
+
+The pattern to look for is **a blue node feeding a red node**. That is the shape of
+every false claim in this review: an assertion the project makes, followed by what the
+chain or the docs' own numbers actually support.
+
+Re-run the diagram linter with:
+
+```
+python scripts/lint_mermaid.py
+```
 
 ## Method
 

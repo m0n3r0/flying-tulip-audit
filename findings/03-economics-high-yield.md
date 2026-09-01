@@ -34,6 +34,36 @@ You cannot pay 7-8% out of a portfolio earning ~3% while preserving principal, u
 the gap is filled by **new capital**. That is the whole argument. Everything below is a
 consequence of it.
 
+```mermaid
+flowchart TB
+    A["CLAIM A - the safety claim<br/>Backing capital is NEVER SPENT<br/>safe, liquid, low-risk, NO-LEVERAGE<br/>so Exit-at-par is honoured<br/>quickly in all conditions"]
+
+    B["CLAIM B - the return claim<br/>Holders earn attractive yield from<br/>surplus backing capital yield<br/>ftUSD marketed at 7-8% APY"]
+
+    A --> CONS["What A actually constrains<br/>the ONLY cash flow available is the<br/>NATIVE YIELD on a safe,<br/>unlevered, liquid portfolio"]
+
+    CONS --> BOUND["And the docs publish the bound themselves<br/>Aave v3 USDC 3.50%<br/>Compound v3 USDC 3.52%<br/>Aave v3 USDT 2.56%<br/>Lido stETH 2.55%"]
+
+    BOUND --> IDENT["THE IDENTITY<br/>yield to holder<br/>is less than or equal to<br/>yield on collateral MINUS operating costs"]
+
+    B --> TEST{"Can 7-8% survive<br/>that identity?"}
+    IDENT --> TEST
+
+    TEST -->|"NO"| GAP["The gap must be filled by one of:<br/>1. new capital<br/>2. other holders' principal<br/>3. a token price the issuer's own<br/>buyback sets in a 2.1M float"]
+
+    TEST -->|"the only way out"| ESCAPE["Break Claim A<br/>take leverage or risk<br/>which the mandate forbids"]
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class A,B claim
+    class CONS,BOUND,TEST neutral
+    class IDENT good
+    class GAP,ESCAPE bad
+```
+
 ---
 
 ## W-01 — "Principal protection" and "unlimited upside" are mutually exclusive
@@ -44,6 +74,38 @@ The Perpetual PUT offers three choices, but you can only ever *use* one per unit
 |---|---|
 | **Exit at par** | Exactly your principal back. **0% nominal return.** |
 | **Withdraw** | You get tradeable FT — but the PUT is **"invalidated forever"** on that portion. |
+
+```mermaid
+flowchart TD
+    PITCH["MARKETED PACKAGE<br/>100% downside protection<br/>PLUS unlimited upside"]
+
+    PITCH --> REALITY["ACTUAL STRUCTURE<br/>a BINARY and IRREVERSIBLE choice<br/>protection OR upside, never both"]
+
+    REALITY --> EX["Exit at par"]
+    REALITY --> WD["Withdraw"]
+
+    EX --> EXR["Exactly your principal back<br/>NOMINAL RETURN 0%<br/>PUT consumed"]
+    WD --> WDR["Tradeable FT<br/>PUT invalidated FOREVER"]
+
+    EXR --> MARG["So the marginal holder<br/>decides purely on price"]
+    WDR --> MARG
+
+    MARG --> UP{"Is FT above par?"}
+    UP -->|"yes"| CW["WITHDRAW<br/>capture the upside<br/>FORFEIT the protection"]
+    UP -->|"at or below par"| CE["EXIT AT PAR or hold<br/>keep the protection<br/>FORFEIT the upside"]
+
+    CW --> CONC["CONSEQUENCE<br/>protection is only ever claimed by people<br/>who are giving up the upside, and upside<br/>only by people who have given up the<br/>protection - the two legs never coexist<br/>in the same hands when either matters"]
+    CE --> CONC
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class PITCH claim
+    class REALITY,EX,WD,MARG,UP neutral
+    class EXR,WDR warn
+    class CW,CE,CONC bad
+```
 
 So the "100% downside protection + unlimited upside" package is not a package. It is a
 **binary, irreversible choice**: protection *or* upside, never both simultaneously, and
@@ -86,6 +148,57 @@ FT trades above par
   → price rises
   → Withdraw looks more attractive
   → more backing released  ⟲
+```
+
+```mermaid
+flowchart TB
+    P1["FT trades above par"]
+    P1 --> P2["Withdraw looks attractive"]
+    P2 --> P3["Holder Withdraws<br/>PUT invalidated forever"]
+    P3 --> P4["Backing capital reserved for<br/>their Exit is RELEASED"]
+    P4 --> P5["Protocol market-buys FT<br/>the ONLY structural bid"]
+    P5 --> P6["FT price rises"]
+    P6 -->|"feedback"| P2
+
+    P4 --> SRC{"Is this yield?"}
+    SRC -->|"NO"| PRIN["It is the withdrawer's PRINCIPAL<br/>a transfer from leavers<br/>to remaining holders"]
+    SRC -->|"YES"| YLD["Only source A qualifies<br/>and it is a residual after opex"]
+
+    PRIN --> ONCE["So the buyback yield is a<br/>ONE-TIME transfer per withdrawing holder<br/>NOT a recurring return"]
+
+    P5 --> BID["The buyback IS the market<br/>in a 2.1M float on 265K/day"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class P1,P2,P3,P4,P5,P6,SRC neutral
+    class PRIN,ONCE,BID bad
+    class YLD good
+```
+
+#### The float maths
+
+```mermaid
+flowchart LR
+    S1["Holder withdraws 10,000 FT<br/>1,000 dollars of backing released"]
+    S1 --> S2["Protocol buys at 0.15<br/>retires 6,667 FT"]
+    S2 --> S3["Holder sold 10,000 FT<br/>into the market"]
+    S3 --> S4["NET FLOAT CHANGE<br/>+3,333 FT"]
+
+    S4 --> S5["Each withdrawal INCREASES float<br/>while REMOVING collateral"]
+
+    S5 --> GOOD["In fairness<br/>backing per remaining PUT holder<br/>stays at exactly 0.10<br/>so the loop is NOT dilutive"]
+
+    S5 --> BAD["But the mechanism sold as<br/>creating scarcity is in aggregate<br/>ADDING to the float"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class S1,S2,S3,S4 neutral
+    class S5,BAD bad
+    class GOOD good
 ```
 
 This loop **consumes the collateral base**. Every pass converts hard backing capital
@@ -157,6 +270,32 @@ Less ecosystem budget       ≈ -$4.0M / yr   (salaries, marketing, infra, ops)
 Surplus available to burn   ≈  $0.2M / yr
 ```
 
+```mermaid
+flowchart TB
+    BC["Backing capital approx 120M<br/>implied by 1.199B FT at 10 FT per dollar"]
+
+    BC --> GROSS["GROSS CARRY at 3.5%<br/>approx 4.2M per year"]
+
+    GROSS --> W1["FIRST CALL: ecosystem budget<br/>salaries, marketing, infra, ops<br/>approx minus 4.0M per year"]
+
+    W1 --> SURPLUS["SURPLUS available to burn<br/>approx 0.2M per year"]
+
+    SURPLUS --> PCT["0.16% of the 121.6M FDV<br/>PER YEAR"]
+
+    W1 --> ZERO["If the budget absorbs all the yield<br/>there is NO surplus<br/>no buyback from this source"]
+
+    ZERO --> QUOTE["The docs concede this themselves:<br/>if the ecosystem budget consumes all<br/>the yield, there is no surplus"]
+
+    PCT --> ALT["Realistic holder yield is approx ZERO<br/>and the buyback then depends on revenue<br/>from a protocol with 265K daily volume<br/>and 688 holders"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class BC,GROSS neutral
+    class W1,SURPLUS warn
+    class PCT,ZERO,QUOTE,ALT bad
+```
+
 $0.2M/yr against a $121.6M FDV is **0.16% per year**. That is the entire yield if the
 ecosystem budget absorbs the carry — which, for a team of this profile, it plausibly
 does. The docs concede the point: *"if the ecosystem budget consumes all the yield,
@@ -181,6 +320,35 @@ To get from ~3% to 7-8% you need roughly 2.5x looping. The docs describe exactly
 
 > "**Loop collateral prudently** (e.g. deposit stS back to the money market) to increase
 > safety buffers and **carry**."
+
+```mermaid
+flowchart TB
+    S0["STAGE 0 - WHAT IS LIVE<br/>ftUSD is a USDC/USDT to Aave wrapper<br/>the only implemented strategy<br/>yields approx 3.5%"]
+
+    NEED["MARKETED TARGET<br/>7-8% APY"]
+
+    S0 --> GAP["Gap to close: roughly 2x to 2.5x<br/>the available carry"]
+    NEED --> GAP
+
+    GAP --> L1["Loop 1<br/>supply USDC, borrow S, stake to stS"]
+    L1 --> L2["Loop 2<br/>deposit stS back to the money market<br/>to increase safety buffers AND carry"]
+    L2 --> L3["Each loop adds carry<br/>and also adds leverage,<br/>liquidation risk and funding risk"]
+
+    L3 --> CONTRA["CONTRADICTION<br/>the backing capital mandate says<br/>safe, liquid, low-risk, NO-LEVERAGE"]
+
+    NEED --> STAGE3["Delta-neutral is STAGE 3+<br/>a roadmap item, not deployed"]
+
+    STAGE3 --> CONTRA2["The 7-8% is either<br/>a forward-looking target<br/>or it requires leverage<br/>either way it is not live today"]
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class NEED claim
+    class S0,GAP,L1,L2,L3,STAGE3 neutral
+    class CONTRA,CONTRA2 bad
+```
 
 **Looping is leverage.** The backing-capital mandate says "no leverage." Either the
 7-8% requires leverage (contradicting the safety claim), or it is a forward-looking
@@ -228,6 +396,45 @@ The docs admit it:
 |---|---|
 | Perpetual PUT: **instant, perpetual, unconditional, evergreen** | stETH / jupSOL / AVAX: **queued, unbonding** |
 
+```mermaid
+flowchart TB
+    subgraph LIAB["LIABILITIES - the Perpetual PUT"]
+        direction LR
+        L1["INSTANT"]
+        L2["PERPETUAL"]
+        L3["UNCONDITIONAL"]
+        L4["EVERGREEN"]
+    end
+
+    subgraph ASSET["ASSETS - stated backing venues"]
+        direction LR
+        A1["stETH<br/>exit queue"]
+        A2["jupSOL<br/>exit queue"]
+        A3["AVAX staking<br/>unbonding"]
+        A4["sUSDe<br/>off-chain basis trade"]
+        A5["Aave stables<br/>the only liquid leg"]
+    end
+
+    LIAB --> MISMATCH["LIQUIDITY TRANSFORMATION<br/>on-demand liabilities funded with<br/>queued, unbonding assets"]
+    ASSET --> MISMATCH
+
+    MISMATCH --> DOC["The docs admit it<br/>synchronized Exit waves can introduce<br/>timing delays; some positions may require<br/>exit queues or unbonding"]
+
+    DOC --> SIZING["Offered mitigation<br/>exposures are sized for timely unwinds"]
+
+    SIZING --> FLAW["Sizing for EXPECTED redemptions is<br/>precisely the bank-run failure mode<br/>the protection is weakest exactly<br/>when it is needed"]
+
+    FLAW --> VERDICT["An American put that cannot be settled<br/>on demand is not an American put"]
+
+    style LIAB fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    style ASSET fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class MISMATCH,DOC,SIZING neutral
+    class FLAW,VERDICT bad
+```
+
 The docs say exposures are "sized for timely unwinds." Sizing for *expected* redemptions
 is precisely the failure mode of every bank run: **the protection is most likely to be
 stressed exactly when it is needed, and it weakest at that moment.**
@@ -251,6 +458,33 @@ Nothing in the docs:
 - discloses the **size** of the Foundation / Team / Incentives allocations, or
 - constrains the treasury's discretion over the split.
 
+```mermaid
+flowchart TD
+    BURN["A buyback-and-burn happens"]
+
+    BURN --> CLASS{"How is it CLASSIFIED?"}
+
+    CLASS -->|"revenue-funded"| UNLOCK["Foundation / Team / Incentives<br/>unlock 1:1 at 40:40:20"]
+    CLASS -->|"backing capital yield only"| NOUNLOCK["Unlocks NOTHING<br/>supply merely shrinks"]
+
+    UNLOCK --> INCENT["The team unlocks ONLY when a burn is<br/>classified as revenue-funded<br/>so the team has a DIRECT FINANCIAL<br/>INCENTIVE to classify every buyback<br/>as revenue-funded"]
+
+    INCENT --> NODEF["Nothing in the docs:<br/>1. DEFINES the boundary between the two sources<br/>2. DISCLOSES the size of Foundation / Team / Incentives<br/>3. CONSTRAINS treasury discretion over the split"]
+
+    NODEF --> GOODPART["The IDEA is genuinely good<br/>tying insider vesting to value actually<br/>returned to holders beats time-based vesting"]
+
+    NODEF --> BADPART["The IMPLEMENTATION gives the beneficiary<br/>unilateral discretion over the classification<br/>that triggers their own unlock"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class BURN,CLASS neutral
+    class UNLOCK,INCENT,NODEF warn
+    class NOUNLOCK,BADPART bad
+    class GOODPART good
+```
+
 The *idea* — tie insider vesting to value actually returned to holders — is genuinely
 good, and better than time-based vesting. The *implementation* gives the beneficiary
 unilateral discretion over the classification that triggers their own unlock.
@@ -266,6 +500,33 @@ On-chain across all five EVM deployments: **1,198,639,737 FT** — a gap of ~8.8
 
 At the stated 10 FT/$1 rate, 1.199B FT implies **≈ $119.9M committed**, which is *below*
 the claimed **$200M private round** on its own.
+
+```mermaid
+flowchart TB
+    DOC["DOCS<br/>10,000,000,000 FT<br/>minted at deployment<br/>no additional minting<br/>totalSupply stays at 10B"]
+
+    CHAIN["CHAIN<br/>1,198,639,737 FT<br/>summed across 5 EVM deployments"]
+
+    DOC --> GAP["GAP approx 8.8B FT = 88% of stated supply"]
+    CHAIN --> GAP
+
+    GAP --> RATE["At the stated 10 FT per dollar<br/>1.199B FT implies approx 119.9M committed"]
+    RATE --> CLAIM["Press and docs claim<br/>a 200M private round"]
+    CLAIM --> DISC["119.9M is BELOW the claimed round<br/>on its own"]
+
+    GAP --> MODEL["Anyone modelling the docs' worked example<br/>500m committed gives 5B FT allocated<br/>and 5B FT non-circulating<br/>is modelling a supply that DOES NOT EXIST"]
+
+    GAP --> CAV["CAVEAT - stated honestly<br/>mint/burn history not fully reconstructed<br/>eth_getLogs capped at 50k blocks, no explorer key<br/>the 8.8B may have been burned in an<br/>event I could not page through<br/>either way it is UNDISCLOSED"]
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class DOC,CLAIM claim
+    class CHAIN,RATE neutral
+    class GAP,DISC,MODEL bad
+    class CAV warn
+```
 
 Anyone modelling the docs' worked example — *"$500m committed → 5B FT allocated, 5B FT
 remain non-circulating"* — is modelling a supply that does not exist. (I could not fully
@@ -291,6 +552,37 @@ that makes manipulation expensive. It does not remove the incentive to manipulat
 reduces the cost of doing so.
 
 ---
+
+```mermaid
+flowchart TB
+    CLAIM["MARKETED AS A SAFETY FEATURE<br/>Futures are oracle-free<br/>ftUSD has no oracles or centralized systems"]
+
+    CLAIM --> BENEFIT["Genuine benefit<br/>removes oracle manipulation and<br/>oracle downtime as attack surfaces"]
+
+    CLAIM --> NEED["But delta-neutral hedging<br/>REQUIRES a reliable mark on the basis"]
+
+    NEED --> SRC{"Where does the mark come from?"}
+
+    SRC -->|"the protocol's own AMM"| POOL["A pool with a 2.1M float"]
+
+    POOL --> C1["The hedge is marked against a price<br/>the protocol itself moves through buybacks"]
+    POOL --> C2["The price is cheap to push<br/>for anyone with size"]
+
+    C1 --> VERDICT["Removing the external oracle removes the<br/>INDEPENDENT REFERENCE - which is the thing<br/>that makes manipulation expensive"]
+    C2 --> VERDICT
+
+    VERDICT --> FINAL["It does NOT remove the incentive to manipulate<br/>it REDUCES THE COST of doing so"]
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class CLAIM claim
+    class NEED,SRC,POOL neutral
+    class BENEFIT good
+    class C1,C2,VERDICT,FINAL bad
+```
 
 ## What is genuinely good
 

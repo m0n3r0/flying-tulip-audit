@@ -84,6 +84,68 @@ The recipient's only remedy is suing Flying Tulip. Every check in `withdrawFT` �
 the recipient check, the "Not enough denom" check, the whole funding gate — is
 circumvented by a different function with a weaker guard.
 
+#### Intended flow vs what the code permits
+
+```mermaid
+flowchart TB
+    subgraph INTENDED["INTENDED - what an escrow should enforce"]
+        direction TB
+        I1["1. Owner funds escrow with FT"]
+        I2["2. Recipient transfers amountDenom<br/>of USDC / USDT / WETH"]
+        I3["3. GATE in withdrawFT<br/>msg.sender == recipient<br/>AND balance + withdrawn >= amountDenom"]
+        I4["4. FT transfers to recipient"]
+        I5["Result: atomic swap<br/>FT out, payment in"]
+        I1 --> I2 --> I3 --> I4 --> I5
+    end
+
+    subgraph ACTUAL["ACTUAL - what the code permits"]
+        direction TB
+        A1["1. Owner funds escrow with FT"]
+        A2["2. Recipient transfers amountDenom"]
+        A3["3. Owner calls withdrawDenom<br/>takes the PAYMENT"]
+        A4["4. Owner calls withdraw FT, all<br/>guard is only token != denomination<br/>FT is NOT the denomination"]
+        A5["Result: owner holds BOTH SIDES<br/>recipient has paid and received nothing"]
+        A1 --> A2 --> A3 --> A4 --> A5
+    end
+
+    I5 -.->|"the guarantee is real<br/>only if withdraw is unreachable"| DELTA["The gap is ONE require statement"]
+    A5 -.-> DELTA
+
+    style INTENDED fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style ACTUAL fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    class DELTA warn
+```
+
+#### The guard is on the wrong function
+
+```mermaid
+flowchart LR
+    subgraph W["withdraw token, amount - onlyOwner"]
+        WG["GUARD<br/>require token != denomination<br/>that is the ONLY guard"]
+    end
+
+    subgraph F["withdrawFT amount - recipient only"]
+        FG["GUARDS<br/>msg.sender == recipient<br/>balance + withdrawn >= amountDenom"]
+    end
+
+    WG --> HOLE["FT is not the denomination<br/>therefore withdraw FT, all PASSES<br/>at any time, with no condition"]
+    FG --> OK["Recipient path is correctly gated"]
+
+    HOLE --> BYPASS["A strongly guarded path is defeated by<br/>a different function in the SAME contract<br/>that has a weaker guard"]
+
+    OK --> BYPASS
+
+    BYPASS --> FIX["Fix: require token != FT<br/>AND token != denomination<br/>or a single atomic claim()"]
+
+    style W fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    style F fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    class HOLE,BYPASS warn
+    class OK,FIX good
+```
+
 **This is a real code-level flaw, not just a centralisation observation:** the guard is
 *placed on the wrong function*. If the intent is to protect the recipient, `withdraw`
 must exclude FT as well.
@@ -138,6 +200,34 @@ owner-or-configurator only. So:
 > If FT is ever paused, every outstanding escrow's `withdrawFT` reverts, and only
 > Flying Tulip can unblock it.
 
+```mermaid
+flowchart TD
+    R["Recipient calls withdrawFT amount"]
+    R --> ST["FT.safeTransfer recipient, amount"]
+    ST --> UP["FT._update runs"]
+    UP --> Q{"paused?"}
+    Q -->|"no"| OK["FT delivered<br/>works today"]
+    Q -->|"yes"| Q2{"from, to or msg.sender<br/>is configurator or endpoint?"}
+    Q2 -->|"no - the escrow is NONE of these"| REV["revert EnforcedPause()"]
+
+    REV --> BRICK["EVERY outstanding escrow's<br/>withdrawFT reverts"]
+    BRICK --> WHO["Only Flying Tulip can unblock it<br/>setPaused is owner-or-configurator only"]
+
+    WHO --> LATENT["FT is DEPLOYED PAUSED<br/>so this is LATENT, not active<br/>paused() == false today on all 5 mainnets"]
+
+    LATENT --> KILL["Net effect: the team holds a kill switch<br/>over investor claims"]
+    KILL --> CONST["FT is a constant<br/>so there is no way to route around it"]
+
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class R,ST,UP,Q,Q2 neutral
+    class OK good
+    class REV,BRICK,WHO,KILL,CONST bad
+    class LATENT warn
+```
+
 Currently `paused() == false` on all five mainnets, so this is latent rather than
 active — but it means the team holds a **kill switch over investor claims**, and
 because `FT` is a `constant` there is no way to route around it.
@@ -152,6 +242,35 @@ The gate is `balanceOf(this) + withdrawnAmountDenom >= amountDenom`. Since
 `withdrawnAmountDenom` only ever increases, this tests *"cumulative denomination ever
 received"*, not *"currently funded"*. Once the threshold is crossed it can never be
 un-crossed, even if the owner has withdrawn 100% of the funds.
+
+```mermaid
+flowchart TB
+    GATE["Gate<br/>balanceOf this + withdrawnAmountDenom >= amountDenom"]
+
+    T0["t0 - recipient pays 100k<br/>balance 100k, withdrawn 0<br/>100k + 0 >= 100k is TRUE"]
+    T1["t1 - owner calls withdrawDenom 100k<br/>balance 0, withdrawn 100k<br/>0 + 100k >= 100k is STILL TRUE"]
+    T2["t2 - owner drains every other token<br/>balance 0, withdrawn 100k<br/>STILL TRUE"]
+
+    GATE --> T0 --> T1 --> T2
+
+    T2 --> MONO["withdrawnAmountDenom only ever INCREASES<br/>it is a monotonic high-water mark"]
+
+    MONO --> MEANS["The gate asks<br/>CUMULATIVE denomination ever received<br/>NOT currently funded"]
+
+    MEANS --> NEVER["Once crossed it can NEVER be un-crossed<br/>even if the owner has withdrawn 100%"]
+
+    NEVER --> NUANCE["In fairness: probably DELIBERATE<br/>so the owner can sweep the payment<br/>and the recipient can still claim"]
+    NEVER --> HARSH["But combined with E-01 the recipient<br/>has ZERO on-chain recourse in every state"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class GATE,T0,T1,T2,MEANS neutral
+    class MONO,NEVER warn
+    class HARSH bad
+    class NUANCE good
+```
 
 That is presumably deliberate (so the owner can sweep the payment and the recipient can
 still claim), but it means `withdrawnAmountDenom` provides **no protection to the
@@ -184,6 +303,29 @@ Any escrow deployed to a testnet points at a non-contract address. `safeTransfer
 address with no code reverts, and because `FT` is a `constant` there is **no upgrade or
 rescue path** — the FT is permanently stuck. The same applies to **Solana**, which is in
 the accepted-assets list: a Solana SPL mint is not an EVM address at all.
+
+```mermaid
+flowchart TB
+    CONST["IERC20 public constant FT<br/>0x5DD1A7A3...88082c"]
+
+    CONST --> MAIN["MAINNETS - CORRECT<br/>Ethereum, BSC, Base, Avalanche, Sonic<br/>verified live"]
+    CONST --> TEST["TESTNETS - WRONG<br/>repo deployments show a DIFFERENT<br/>FT address on every testnet"]
+    CONST --> SOL["SOLANA is in the accepted-assets list<br/>an SPL mint is not an EVM address at all"]
+
+    TEST --> NOCODE["Any escrow deployed to a testnet<br/>points at a NON-CONTRACT address"]
+    NOCODE --> REV["safeTransfer to an address with<br/>no code reverts"]
+    REV --> STUCK["FT is PERMANENTLY stuck"]
+
+    STUCK --> NOFIX["FT is a constant<br/>no upgrade path<br/>no rescue path"]
+
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class CONST neutral
+    class MAIN good
+    class TEST,NOCODE,REV,STUCK,NOFIX,SOL bad
+```
 
 **Recommendation.** Make `FT` an immutable constructor argument validated at deploy time.
 
@@ -259,6 +401,43 @@ states:
 That is now false. The file changed after the audit, and the repo still presents it as
 the audited artefact. Anyone verifying "was this exact file audited?" gets the wrong
 answer. There is no updated report in `audits/` matching the new hash.
+
+```mermaid
+flowchart TB
+    AUD["PeckShield report 2025-170 v1.0-rc<br/>dated 2025-10-06<br/>0 Critical, 0 High, 0 Medium, 2 Low"]
+
+    AUD --> H1["Checksum recorded in the report<br/>md5 413bba6a92c9d317855979e49c9dcb49<br/>sha256 da6e16ae...90a8b5664"]
+
+    NOW["Current src/Escrow.sol in the repo"]
+    NOW --> H2["md5 8e50a326315a0456be1550c733fce52d<br/>sha256 2f28e7dd...1f76c635"]
+
+    H1 --> CMP{"Do the checksums match?"}
+    H2 --> CMP
+
+    CMP -->|"NO"| DIFF["Visible delta<br/>transfer to safeTransfer<br/>i.e. the fix for PVE-001<br/>line numbers shift L28-36 to L35-43"]
+
+    DIFF --> BENIGN["The change is almost certainly GOOD<br/>SafeERC20 is the standard fix for<br/>non-ERC20-compliant tokens"]
+
+    CMP --> CLAIM["The README still states<br/>src/Escrow.sol is excluded from forge fmt<br/>to PRESERVE THE AUDITED SOURCE EXACTLY"]
+
+    CLAIM --> FALSE["That provenance claim is now FALSE"]
+
+    FALSE --> RISK["Anyone asking<br/>was this EXACT file audited?<br/>gets the wrong answer"]
+
+    RISK --> NOREPORT["No updated report in audits/<br/>covers the new hash"]
+
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class AUD,NOW,H1,H2,CMP,DIFF neutral
+    class BENIGN good
+    class CLAIM,FALSE,RISK,NOREPORT bad
+```
+
+Note the important asymmetry: **the code change is fine, the provenance claim is not.**
+This is not an accusation of tampering — it is an audit-integrity gap where an audit
+badge implies coverage of code that postdates the audit.
 
 **Recommendation.** Publish the re-audit (or a delta letter) against
 `sha256 2f28e7dd…76c635`, or revert the README claim. Do not let an audit badge imply

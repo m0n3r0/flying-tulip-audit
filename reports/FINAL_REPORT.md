@@ -42,6 +42,43 @@ fix. I did find one thing they did not: **the deployed source no longer matches 
 audited checksum** (E-09), while the README still claims the file is preserved "to keep
 the audited source exactly."
 
+### Where the argument holds and where it breaks
+
+This is the whole review in one picture. The left column is genuinely creditable — this
+structure is more honest than most. The right column is what does not survive the
+protocol's own numbers.
+
+```mermaid
+flowchart TB
+    subgraph HOLDS["WHAT HOLDS UP - genuinely creditable"]
+        direction TB
+        H6["FT.sol is competently written<br/>no arithmetic bug, no reentrancy,<br/>no signature-replay flaw<br/>both EIP-712 typehashes verified"]
+        H1["1:1 ring-fenced backing is a real<br/>improvement over emission-funded yield"]
+        H2["No inflation<br/>enforced by constructor-only minting"]
+        H3["Revenue-linked insider unlocks<br/>beat time-based vesting in principle"]
+        H4["The perpetual put is a genuinely novel<br/>retail-protective idea, and putting it<br/>on-chain beats putting it in a term sheet"]
+        H5["KNOWN_ISSUES.md is candid<br/>admits protocol-level losses are not<br/>handled on-chain, circuit-breaker lag"]
+    end
+
+    subgraph BREAKS["WHAT DOES NOT SURVIVE THE NUMBERS"]
+        direction TB
+        B6["PutManager holds 100% of backing capital<br/>and is CLOSED SOURCE<br/>only a 50-line escrow was third-party audited"]
+        B1["Docs say 10B supply<br/>chain says 1.199B<br/>an 88% gap"]
+        B2["7-8% APY marketed<br/>vs 2.55-3.52% in the docs' own table<br/>Stage 0 is only a USDC/USDT to Aave wrapper"]
+        B3["Yield is JUNIOR to team opex<br/>realistic surplus approx 0.16% of FDV"]
+        B4["The buyback scales only on PRINCIPAL<br/>released by leavers, not on yield<br/>reflexive, consumes collateral, adds float"]
+        B5["Instant, perpetual, unconditional puts<br/>funded with queued, unbonding LSTs"]
+    end
+
+    HOLDS --> VERDICT["Both columns are true at once.<br/>The mechanism is well built;<br/>the yield claim layered on top of it<br/>is not supported by the deployed system."]
+    BREAKS --> VERDICT
+
+    style HOLDS fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style BREAKS fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    class VERDICT warn
+```
+
 ### The three things I would want answered before putting capital in
 
 1. **Where are the other 8.8B FT?** Docs say 10B fixed supply. Chain says **1.199B**.
@@ -51,6 +88,35 @@ the audited source exactly."
 3. **Why does the escrow let the owner take both sides?** `Escrow.withdraw()` excludes only
    the denomination token — so the owner can withdraw the **FT** deposited for the
    investor, defeating the contract's only stated protection.
+
+```mermaid
+flowchart LR
+    subgraph GUARDED["withdrawFT - the GUARDED path"]
+        G1["checks msg.sender == recipient"]
+        G2["checks funding threshold met"]
+        G3["FT goes to the recipient"]
+        G1 --> G2 --> G3
+    end
+
+    subgraph UNGUARDED["withdraw - the OWNER path"]
+        U1["only guard:<br/>token != denomination"]
+        U2["FT is NOT the denomination"]
+        U3["withdraw FT, all succeeds<br/>any time, no condition"]
+        U1 --> U2 --> U3
+    end
+
+    G3 --> OUT1["Investor receives FT"]
+    U3 --> OUT2["Owner holds BOTH the payment<br/>AND the FT"]
+
+    OUT1 -.->|"bypassed by"| OUT2
+
+    style GUARDED fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style UNGUARDED fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    class OUT1 warn
+    class OUT2 bad
+```
 
 ---
 
@@ -74,6 +140,38 @@ the audited source exactly."
 | **E-06** | No events emitted anywhere | Low | Escrow | — |
 | **E-07** | Blacklistable / non-standard denomination tokens | Low | Escrow | PeckShield PVE-001 |
 | **E-08** | No timeout or refund path for the recipient | Info | Escrow | — |
+
+### Coverage map — what was actually reviewed
+
+```mermaid
+flowchart TB
+    subgraph AUDITED["THIRD-PARTY AUDITED"]
+        E["Escrow.sol - 50 LoC<br/>PeckShield report 2025-170, 2025-10-06<br/>0 Critical / 0 High / 0 Medium / 2 Low"]
+    end
+
+    subgraph SELF["SELF-AUDITED - internal AUDIT.md"]
+        T["FT.sol - 370 LoC<br/>1 Medium / 1 Low / 3 Info"]
+    end
+
+    subgraph NONE["NO PUBLIC AUDIT - Sherlock bounty only"]
+        P["PutManager<br/>custodies 100% of backing capital"]
+        S["AaveStrategy, YieldClaimer,<br/>LeverageRfqEngine, CircuitBreaker,<br/>pFTMarketplace, PositionsManager"]
+    end
+
+    AUDITED --> G1["The only source-reviewed component<br/>is a 50-line helper contract"]
+    NONE --> G2["The contract holding ALL user collateral<br/>has NO published audit"]
+    SELF --> G3["The token was reviewed by its own authors"]
+
+    G1 --> CONC["COVERAGE GAP"]
+    G2 --> CONC
+    G3 --> CONC
+
+    style AUDITED fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style SELF fill:#fef3c7,stroke:#d97706,color:#78350f
+    style NONE fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    class G1,G2,G3,CONC bad
+```
 
 ### Prior audits on record
 
@@ -179,6 +277,32 @@ Less ecosystem budget       ≈ -$4.0M / yr   ← "the FIRST call on backing cap
 Surplus available to burn   ≈  $0.2M / yr   = 0.16% of the $121.6M FDV
 ```
 
+```mermaid
+flowchart TB
+    BC["Backing capital approx 120M<br/>implied by 1.199B FT at 10 FT per dollar"]
+
+    BC --> GROSS["GROSS CARRY at 3.5%<br/>approx 4.2M per year"]
+
+    GROSS --> W1["FIRST CALL: ecosystem budget<br/>salaries, marketing, infra, ops<br/>approx minus 4.0M per year"]
+
+    W1 --> SURPLUS["SURPLUS available to burn<br/>approx 0.2M per year"]
+
+    SURPLUS --> PCT["0.16% of the 121.6M FDV<br/>per year - the entire yield"]
+
+    W1 --> ZERO["If the budget absorbs all the yield<br/>there is NO surplus<br/>no buyback from this source"]
+
+    ZERO --> QUOTE["The docs concede this themselves"]
+
+    PCT --> ALT["So the buyback depends on revenue from<br/>a protocol with 265K daily volume<br/>and 688 holders"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class BC,GROSS neutral
+    class W1,SURPLUS warn
+    class PCT,ZERO,QUOTE,ALT bad
+```
+
 The docs concede this: *"if the ecosystem budget consumes all the yield, there is no
 surplus → no buyback from this source."*
 
@@ -189,6 +313,31 @@ from people who are leaving. It is a transfer, and it is reflexive:
 ```
 FT above par → Withdraw attractive → backing released → protocol buys FT
              → price rises → Withdraw more attractive → more backing released ⟲
+```
+
+```mermaid
+flowchart TB
+    P1["FT above par"] --> P2["Withdraw looks attractive"]
+    P2 --> P3["Holder Withdraws<br/>PUT invalidated forever"]
+    P3 --> P4["Backing capital released"]
+    P4 --> P5["Protocol market-buys FT<br/>the only structural bid"]
+    P5 --> P6["Price rises"]
+    P6 -->|"feedback"| P2
+
+    P4 --> ISYIELD{"Is this yield?"}
+    ISYIELD -->|"NO"| PRIN["It is the withdrawer's PRINCIPAL<br/>a transfer from leavers to stayers<br/>a ONE-TIME transfer, not a return"]
+    ISYIELD -->|"YES - source A only"| RESID["Residual after the ecosystem budget<br/>approx 0.2M per year"]
+
+    P5 --> FLOAT["Executes into a 2.1M float<br/>on 265K per day of volume<br/>the protocol IS the market"]
+
+    FLOAT --> MARK["So the price that sets the unlimited upside<br/>for 1.199B locked FT is a mark the<br/>issuer largely determines"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class P1,P2,P3,P4,P5,P6,ISYIELD neutral
+    class PRIN,FLOAT,MARK bad
+    class RESID warn
 ```
 
 Each pass converts collateral into burned FT while **increasing float**
@@ -208,6 +357,40 @@ exits the docs advertise.
 perp-funding position held at exchanges and custodians — is listed as a *backing* venue
 under "no leverage." And the docs' own path to higher carry is *"loop collateral
 prudently… to increase… carry."* Looping is leverage.
+
+```mermaid
+flowchart TB
+    subgraph C1["CONTRADICTION 1 - no leverage vs 7-8 percent"]
+        direction TB
+        X1["Mandate<br/>safe, liquid, low-risk, NO-LEVERAGE"]
+        X2["Marketing target<br/>7-8% APY"]
+        X3["Docs' own benchmarks<br/>2.55% to 3.52%"]
+        X4["Docs' own method<br/>loop collateral prudently to increase carry"]
+        X1 --> X4
+        X2 --> X4
+        X3 --> X4
+        X4 --> X5["Looping IS leverage"]
+        X4 --> X6["sUSDe is listed as a backing venue<br/>but it IS an off-chain delta-neutral<br/>basis trade - levered in substance"]
+    end
+
+    subgraph C2["CONTRADICTION 2 - instant put vs queued collateral"]
+        direction TB
+        Y1["LIABILITY<br/>instant, perpetual, unconditional,<br/>evergreen put"]
+        Y2["ASSET<br/>stETH, jupSOL, AVAX staking<br/>exit queues and unbonding"]
+        Y1 --> Y3["Sizing for EXPECTED redemptions<br/>is precisely the bank-run failure mode"]
+        Y2 --> Y3
+        Y3 --> Y4["The protection is weakest<br/>exactly when it is needed"]
+        Y4 --> Y5["An American put that cannot settle<br/>on demand is not an American put"]
+    end
+
+    style C1 fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    style C2 fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class X1,X2,X3,X4,Y1,Y2 neutral
+    class X5,X6,Y3,Y4,Y5 bad
+```
 
 **Instant put vs. queued collateral.** The Perpetual PUT is instant, perpetual, and
 unconditional. The backing includes stETH, jupSOL, and AVAX staking, which have
@@ -277,5 +460,21 @@ flying-tulip-audit/
 │   └── FINAL_REPORT.md             this document
 ├── contracts/                      cloned upstream repos (ft, escrow, security, …)
 └── scripts/
-    └── keccak.py                   pure-Python keccak-256 for selector verification
+    ├── keccak.py                   pure-Python keccak-256 for selector verification
+    └── lint_mermaid.py             dependency-free linter for the diagrams
 ```
+
+These documents contain **36 Mermaid diagrams**, colour-coded so the argument is
+readable without the surrounding prose:
+
+| Colour | Meaning |
+|---|---|
+| **green** | Holds up — verified, or a genuine strength |
+| **blue** | The project's own claim, stated as claimed |
+| **amber** | Conditionally true, or a caveat that materially limits the claim |
+| **red** | Broken, false, or a vulnerability |
+| **purple** | Closed source — cannot be verified either way |
+
+The recurring shape is **a blue node feeding a red node**: an assertion the project
+makes, followed by what the chain or the docs' own numbers actually support.
+Validate them with `python scripts/lint_mermaid.py`.

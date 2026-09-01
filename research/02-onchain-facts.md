@@ -35,6 +35,37 @@ contributions** — *below* the publicly claimed **$200M private round** on its 
 > an event I could not page through. Either way it is an **undisclosed ~88% supply
 > reduction** or stale documentation — materially relevant to anyone modelling FDV.
 
+```mermaid
+flowchart TB
+    DOC["DOCS<br/>maximum supply 10,000,000,000 FT<br/>minted at deployment<br/>no additional minting<br/>totalSupply stays at 10B"]
+
+    CHAIN["CHAIN - totalSupply summed over 5 EVM deployments<br/>Ethereum 1,196,643,745.86<br/>Sonic 1,979,127.96<br/>Base 16,622.64<br/>BNB Chain 241.37<br/>Avalanche 0.00"]
+
+    TOTAL["MEASURED TOTAL<br/>1,198,639,737.83 FT"]
+
+    GAP["GAP: approx 8.80B FT<br/>88% of stated supply"]
+
+    DOC --> TOTAL
+    CHAIN --> TOTAL
+    TOTAL --> GAP
+
+    GAP --> R1["Rate: 10 FT per 1 dollar"]
+    R1 --> IMP["Implies approx 119.9M of contributions"]
+    IMP --> CONTRA["Docs and press claim<br/>a 200M private round<br/>119.9M is BELOW that on its own"]
+
+    GAP --> CAV["Caveat: mint/burn history not fully reconstructed<br/>eth_getLogs capped at 50k blocks, no explorer key<br/>the 8.8B may have been burned<br/>Either way it is UNDISCLOSED"]
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class DOC claim
+    class CHAIN,TOTAL,R1,IMP neutral
+    class GAP,CONTRA bad
+    class CAV warn
+```
+
 ### Abandoned test deployment
 `0x9B15Cce2D9C396B8B840C167374DCe873b2CcE6d` (Sonic) is in the repo's own
 `deployments/sonic-mainnet/FT.json`. Live state:
@@ -59,6 +90,32 @@ gets picked up by token trackers.
 | 5 | `0x4de4043a9c6990b414bdcc106f15ef8ab3300c13` | 10,000,000 | 0.84% | unknown |
 
 **Top 2 addresses control 89.95% of supply.**
+
+```mermaid
+flowchart TB
+    SUP["Total measured supply<br/>1,198,639,737 FT"]
+
+    SUP --> CFG["configurator Safe 0x22246a<br/>648,033,208 FT = 54.15%"]
+    SUP --> PM["unidentified contract 0xba49d0<br/>likely PutManager - 428,358,985 FT = 35.80%"]
+    SUP --> REST["remaining 684 holders<br/>121,579,326 FT = 10.14%"]
+    SUP --> FLOAT["TRADEABLE FLOAT<br/>20,668,218 FT = 1.72%"]
+
+    CFG --> CFG_N["The same role that is<br/>EXEMPT FROM THE PAUSE<br/>holds over half the supply"]
+    PM --> PM_N["Closed source<br/>no public audit"]
+    REST --> REST_N["Includes 50M + 30M + 10M<br/>unidentified top-3 to top-5"]
+    FLOAT --> FLOAT_N["2.10M float market cap<br/>265K/day volume<br/>688 holders"]
+
+    FLOAT_N --> PRICE["This thin float sets the price<br/>that marks the 'unlimited upside'<br/>of the other 98.28%"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef closed fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    class SUP,REST neutral
+    class CFG,CFG_N,FLOAT,FLOAT_N,PRICE bad
+    class PM,PM_N closed
+    class REST_N warn
+```
 
 ## 3. Market data (Ethereum, 2026-09-02)
 
@@ -96,6 +153,46 @@ configurator Safe (0x22246a, 3-of-4):        owner Safe (0x1118e1, 3-of-5):
 **4 of 5 owner signers are also configurator signers.** The "separation of duties"
 between the role that can pause (`owner`) and the role that is exempt from the pause
 (`configurator`) is largely cosmetic. There is no independent check on the configurator.
+
+```mermaid
+flowchart TB
+    subgraph OWN["owner Safe 0x1118e1 - 3 of 5"]
+        O1["0xb7b54333"]
+        O2["0x3c427497"]
+        O3["0x09e2b492"]
+        O4["0xd0ca8838"]
+        O5["0xf9e5af16<br/>owner only"]
+    end
+
+    subgraph CFG["configurator Safe 0x22246a - 3 of 4"]
+        C1["0xb7b54333"]
+        C2["0x3c427497"]
+        C3["0x09e2b492"]
+        C4["0xd0ca8838"]
+    end
+
+    O1 <-->|"same signer"| C1
+    O2 <-->|"same signer"| C2
+    O3 <-->|"same signer"| C3
+    O4 <-->|"same signer"| C4
+
+    OWN --> POW_O["Powers: setPaused<br/>setName, setSymbol<br/>transferConfigurator"]
+    CFG --> POW_C["Powers: setPaused<br/>transferConfigurator<br/>PAUSE-BYPASS TRANSFERS"]
+
+    CFG --> HOLD["Also holds 648,033,208 FT<br/>54.15% of supply"]
+
+    POW_O --> FX["Consequence<br/>The role that can freeze everyone else<br/>and the role exempt from the freeze<br/>are controlled by 4 shared keys<br/>No independent check exists"]
+
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class O5 neutral
+    class C1,C2,C3,C4,O1,O2,O3,O4 warn
+    class POW_C,HOLD,FX bad
+    class POW_O neutral
+    style OWN fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    style CFG fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+```
 
 ## 5. Pause state
 
