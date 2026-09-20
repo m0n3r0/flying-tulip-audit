@@ -79,13 +79,14 @@ number behind `FT.sol`.
 - `findings/01-FT-token.md` — FT.sol review + attack path
 - `findings/02-Escrow.md` — Escrow.sol review
 - `findings/03-economics-high-yield.md` — the yield critique
+- `reports/2026-09-20-apy-reverification.md` — **are the advertised APYs true?** Six-agent adversarial swarm + founder-X re-verification, 18 days later
 - `contracts/` — upstream source (cloned from `github.com/flyingtulipdotcom`)
 - `scripts/keccak.py` — pure-Python keccak-256 used to verify EIP-712 typehashes
 - `scripts/lint_mermaid.py` — dependency-free linter for the diagrams in these docs
 
 ## Reading the diagrams
 
-There are 36 Mermaid diagrams across these documents. They are colour-coded, and the
+There are 38 Mermaid diagrams across these documents. They are colour-coded, and the
 colours are the argument:
 
 | Colour | Meaning |
