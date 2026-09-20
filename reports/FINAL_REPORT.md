@@ -74,7 +74,7 @@ flowchart TB
 
     subgraph BREAKS["WHAT DOES NOT SURVIVE THE NUMBERS"]
         direction TB
-        B6["PutManager holds 100% of backing capital<br/>and is CLOSED SOURCE<br/>only a 50-line escrow was third-party audited"]
+        B6["PutManager holds 100% of backing capital<br/>code never published officially, but was<br/>Sherlock-contested Jan 2026 (1,704 submissions)<br/>NO findings released; reviewed in findings/04"]
         B1["Docs say 10B supply - stale<br/>chain: 850M and shrinking<br/>burn disclosed on X, never in docs"]
         B2["8-12% marketed, 7-12% paid - but<br/>base APY 0, 100% FT rewards at<br/>treasury discretion; scaling path is<br/>leverage the mandate forbids"]
         B3["Backing is ~51M per founder<br/>gross carry ~1.8M/yr is JUNIOR to opex<br/>yield-funded surplus is zero to negative"]
@@ -155,6 +155,25 @@ flowchart LR
 | **E-07** | Blacklistable / non-standard denomination tokens | Low | Escrow | PeckShield PVE-001 |
 | **E-08** | No timeout or refund path for the recipient | Info | Escrow | — |
 
+#### ftPUT protocol — PutManager / strategies / wrapper / oracle / CircuitBreaker ([findings/04](../findings/04-ftput-putmanager.md))
+
+Contest codebase (`flyingtulipdotcom/ftPUT` @ `193074610…`, 1,648 nsloc) — the capital-custody
+layer behind the FT token. Reviewed here 2026-09-20; prior-claim verdicts W-01 / W-02 (source C)
+/ W-06 confirmed at code level, W-05 (no 8x hedge) confirmed, W-09 ("oracle-free")
+refuted. Detail in findings/04.
+
+| ID | Finding | Severity |
+|---|---|---|
+| **S-01** | `HyphaStAVAXStrategy.claimQueued` unauthenticated (L260-267) — Critical **in tree**, but in the Hypha/Lista layer and **likely undeployed** (no confirmed Avalanche rollout) | **Critical*** |
+| **W-1** | `withdrawUnderlying` (in-kind) lacks the try/catch hardening of `withdraw` — one reverting strategy DoS-es all in-kind exits | High |
+| **O-1** | FlyingTulipOracle has **no staleness check** → stale strikes fixed at invest | High |
+| **F-04** | Oracle staleness/manipulation at invest (no validity check in PutManager) | Medium |
+| **W-2** | Exact all-or-nothing withdrawals freeze exits on strategy loss | Medium |
+| **A-2** | Merkle cap bypass via unbounded `(who,asset,0)` leaf + `proofAmount` | Medium |
+| **PM-02** | Protocol losses not handled on-chain — **first-come-first-served** allocation | Medium (acknowledged) |
+
+*Critical by code, but exposure gated on an unconfirmed deployment (see findings/04 §6).
+
 ### Coverage map — what was actually reviewed
 
 ```mermaid
@@ -167,24 +186,33 @@ flowchart TB
         T["FT.sol - 370 LoC<br/>1 Medium / 1 Low / 3 Info"]
     end
 
-    subgraph NONE["NO PUBLIC AUDIT - Sherlock bounty only"]
-        P["PutManager<br/>custodies 100% of backing capital"]
-        S["AaveStrategy, YieldClaimer,<br/>LeverageRfqEngine, CircuitBreaker,<br/>pFTMarketplace, PositionsManager"]
+    subgraph CONTEST["SHERLOCK CONTEST #1223 - reviewed, findings never released"]
+        P["PutManager, ftYieldWrapper,<br/>CircuitBreaker, pFT, ftACL,<br/>FlyingTulipOracle, AaveStrategy<br/>1,648 nsloc - contest-reviewed Jan 2026<br/>1,704 submissions; judging halted<br/>~2%; NO findings ever published"]
+        S["still never available: pFTMarketplace,<br/>LeverageRfqEngine, PositionsManager<br/>+ 5 out-of-scope strategies"]
     end
 
-    AUDITED --> G1["The only source-reviewed component<br/>is a 50-line helper contract"]
-    NONE --> G2["The contract holding ALL user collateral<br/>has NO published audit"]
-    SELF --> G3["The token was reviewed by its own authors"]
+    subgraph NOW["NOW REVIEWED - THIS REPO, findings/04"]
+        R["full ftPUT codebase re-audited 2026-09-20<br/>1 Critical + 2 High + 4 Medium in-scope<br/>see findings/04-ftput-putmanager.md"]
+    end
+
+    AUDITED --> G1["The only source-reviewed public component<br/>is a 50-line helper contract"]
+    CONTEST --> G2["Code was contested Jan 2026 but never<br/>published officially and NO findings released"]
+    NOW --> G3["The full contest codebase is now<br/>reviewed here - see findings/04"]
+    SELF --> G4["The token was reviewed by its own authors"]
 
     G1 --> CONC["COVERAGE GAP"]
     G2 --> CONC
-    G3 --> CONC
+    G4 --> CONC
+    G3 -.->|"closes the gap"| CONC
 
     style AUDITED fill:#dcfce7,stroke:#16a34a,color:#14532d
     style SELF fill:#fef3c7,stroke:#d97706,color:#78350f
-    style NONE fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    style CONTEST fill:#fef3c7,stroke:#d97706,color:#78350f
+    style NOW fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
-    class G1,G2,G3,CONC bad
+    classDef goodtext fill:#dcfce7,stroke:#16a34a,color:#14532d
+    class G1,G2,G4,CONC bad
+    class R goodtext
 ```
 
 ### Prior audits on record
@@ -193,10 +221,14 @@ flowchart TB
 |---|---|---|---|
 | **FT Escrow** | **PeckShield** (report 2025-170, v1.0-rc) | 2025-10-06 | **0 Critical · 0 High · 0 Medium · 2 Low** |
 | FT token | internal `AUDIT.md` in `ft` repo | — | 1 Medium (Q-1, deploy script) · 1 Low (Q-2) · 3 Info |
-| Full protocol | **Sherlock bug bounty** only | ongoing | no published public report |
+| Full protocol | **Sherlock bug bounty** #248 | ongoing | no published public report |
+| Full protocol (`PutManager`, `ftYieldWrapper`, `CircuitBreaker`, `pFT`, `AaveStrategy`; 1,648 nsloc) | **Sherlock CONTEST #1223** ([audits.sherlock.xyz/contests/1223](https://audits.sherlock.xyz/contests/1223)) | contest 2026-01-05 → 01-17; judging halted 2026-03-16 at ~2% | 1,704 submissions; **NO findings ever published** (`report: null`) |
 
-Note the gap: the only third-party source-reviewed component is a **50-line helper
-escrow**. The contract holding all user collateral has no published audit.
+Note the gap — now restated: the only public source-reviewed component is a **50-line
+helper escrow**, and the full protocol code was never published officially. The ftPUT
+codebase *was* reviewed — in Sherlock contest #1223 (1,704 watson submissions) — but no
+findings were ever released, and the deployed source may have drifted since the contest
+commit. This repo now reviews that codebase in [`findings/04`](../findings/04-ftput-putmanager.md).
 
 ### Economic
 
@@ -228,12 +260,15 @@ Avalanche, Sonic). Full detail in [`research/02-onchain-facts.md`](../research/0
 | 24h volume | **$267,438** (14 pairs) |
 | Holders | **688** (2026-09-02) |
 | Top holder | `0x22246a…` = the **configurator** — **330,000,000 FT (38.95%)** (was 648M; absorbed most of the burn) |
-| Second holder | `0xba49d0…` (unidentified, likely `PutManager`) — **427,039,967 FT (50.40%)** |
+| Second holder | `0xba49d0…` (**`PutManager` proxy — confirmed** on-chain) — **427,039,967 FT (50.40%)** |
 | Top-2 concentration | **89.35%** |
 | `paused()` | false on all 5 mainnets, re-verified (but the contract is *deployed* paused) |
 | PUT backing capital | **$50.95M** (founder, 2026-08-10) |
 | Protocol revenue | **$143K per 30 days** (founder, 2026-08-26, DefiLlama methodology) |
 | ftUSD | live — **3.91M supply** on Ethereum + Sonic; sftUSD paying **7.87% / 11.36%**, base APY 0 |
+| PutManager deployed state (ETH `0xba49d0…`) | sale **closed**, `transferable=true`; **ftOfferingSupply 427,039,967.11 FT** · **ftAllocated 399,436,072.55 FT** |
+| Oracle `ftPerUSD` | pinned **10 FT/USD = $0.10** — **issuer-set** (msig-mutable, not market-derived) |
+| Official multisigs | PutManager `0x3518db…` · oracle `0x1118e1…` · configurator `0x22246a…` — full contract inventory in [`research/02`](../research/02-onchain-facts.md) |
 
 ### Privileged roles — and why they are not independent
 
@@ -452,6 +487,13 @@ are applied in place in the linked documents:
 3. **The 8.8B supply gap is explained — on X, not in the docs.** The founder disclosed
    the 8.79-9B unallocated burn publicly (2026-08-03/08-10); supply is now 850M. The
    remaining finding is narrowed to *stale documentation*, not undisclosed reduction.
+4. **"Closed source, never reviewed" is restated.** The ftPUT protocol code is never
+   published officially — but it *was* reviewed: in **Sherlock contest #1223** (2026-01-05
+   → 17) on `flyingtulipdotcom/ftPUT` (PutManager, ftYieldWrapper, CircuitBreaker, pFT,
+   ftACL, FlyingTulipOracle, AaveStrategy; 1,648 nsloc), with **1,704 watson submissions**.
+   Judging halted 2026-03-16 at ~2% and **no findings were ever released** (`report: null`);
+   the deployed source may have drifted since the contest commit. This repo now reviews
+   that codebase itself in [`findings/04`](../findings/04-ftput-putmanager.md).
 
 The marketing site has also **escalated** the claim (7-8% → 8-12%) since first read, and
 two new distribution programs went live after it (Points, 2026-09-16; revenue-funded
@@ -477,6 +519,15 @@ Rewards, 2026-09-18).
    State plainly that the measured payout is FT rewards at treasury discretion — or make
    it one.
 7. Put a hard cap on queued/unbonding backing assets, and disclose the cap.
+8. **Publish the Sherlock contest #1223 findings, or commission a fresh audit** of
+   post-contest drift — judging halted at ~2% and no output was ever released
+   (`report: null`).
+9. Fix `HyphaStAVAXStrategy.claimQueued` authorization (S-01) **before any Avalanche
+   deployment**.
+10. Add staleness checks to `FlyingTulipOracle` (O-1 / F-04).
+11. Harden `withdrawUnderlying` with the same try/catch hardening as `withdraw` (W-1).
+12. Replace first-come-first-served loss allocation with a **backstop or pro-rata
+    socialization** (PM-02).
 
 **For anyone considering capital**
 - The put protects **par**, not purchasing power and not opportunity cost. Exiting at par
@@ -500,7 +551,9 @@ flying-tulip-audit/
 ├── findings/
 │   ├── 01-FT-token.md              FT.sol review + attack path
 │   ├── 02-Escrow.md                Escrow.sol review
-│   └── 03-economics-high-yield.md  the yield critique
+│   ├── 03-economics-high-yield.md  the yield critique
+│   └── 04-ftput-putmanager.md      ftPUT protocol (PutManager, strategies,
+│                                   wrapper, oracle, CircuitBreaker)
 ├── reports/
 │   └── FINAL_REPORT.md             this document
 ├── contracts/                      cloned upstream repos (ft, escrow, security, …)
@@ -509,7 +562,7 @@ flying-tulip-audit/
     └── lint_mermaid.py             dependency-free linter for the diagrams
 ```
 
-These documents contain **36 Mermaid diagrams**, colour-coded so the argument is
+These documents contain **43 Mermaid diagrams**, colour-coded so the argument is
 readable without the surrounding prose:
 
 | Colour | Meaning |

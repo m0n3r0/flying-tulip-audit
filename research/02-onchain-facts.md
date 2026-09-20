@@ -97,7 +97,7 @@ gets picked up by token trackers.
 | # | Address | Balance (FT, 2026-09-20) | Share | Identity |
 |---|---|---|---|---|
 | 1 | `0x22246a9183ce2ce6e2c2a9973f94aea91435017c` | 330,000,000 | **38.95%** | the `configurator` (same address verified at first read; 648,033,208 on 2026-09-02 — its balance absorbed most of the 18-day burn) |
-| 2 | `0xba49d0ac42f4fba4e24a8677a22218a4df75ebaa` | 427,039,967 | **50.40%** | unidentified contract (141-byte runtime; not a Safe; likely `PutManager`) |
+| 2 | `0xba49d0ac42f4fba4e24a8677a22218a4df75ebaa` | 427,039,967 | **50.40%** | **`PutManager` proxy — CONFIRMED** (EIP-1167; `ftOfferingSupply()` on-chain equals its FT balance exactly; all 41 contest selectors present; see *Deployed PutManager state* below) |
 | 3 | `0xaec73da67132a45d93e20cddf1b8cd13e2580870` | 50,000,000 | 5.90% | unknown (2026-09-02; not re-measured) |
 | 4 | `0x4577286a6082df1f99adbf790c4104dd90abefbc` | 30,000,000 | 3.54% | unknown (2026-09-02; not re-measured) |
 | 5 | `0x4de4043a9c6990b414bdcc106f15ef8ab3300c13` | 10,000,000 | 1.18% | unknown (2026-09-02; not re-measured) |
@@ -109,12 +109,12 @@ flowchart TB
     SUP["Total measured supply 2026-09-20<br/>850,062,800 FT"]
 
     SUP --> CFG["configurator Safe 0x22246a<br/>330,000,000 FT = 38.95%<br/>was 648M before the burns"]
-    SUP --> PM["unidentified contract 0xba49d0<br/>likely PutManager - 427,039,967 FT = 50.40%"]
+    SUP --> PM["PutManager proxy 0xba49d0 - CONFIRMED<br/>427,039,967 FT = 50.40%<br/>== ftOfferingSupply on-chain"]
     SUP --> REST["remaining holders<br/>~10% incl 50M + 30M + 10M unidentified"]
     SUP --> FLOAT["TRADEABLE FLOAT<br/>~20.7M FT ≈ 2M dollars<br/>founder concurs: 2m mcap"]
 
     CFG --> CFG_N["The same role that is<br/>EXEMPT FROM THE PAUSE<br/>holds 39% of supply"]
-    PM --> PM_N["Closed source<br/>no public audit"]
+    PM --> PM_N["Unpublished officially<br/>Sherlock-contested, no findings released<br/>reviewed in findings/04"]
     FLOAT --> FLOAT_N["~265K/day volume<br/>688 holders"]
 
     FLOAT_N --> PRICE["This thin float sets the price<br/>that marks the 'unlimited upside'<br/>of the other ~97%"]
@@ -208,6 +208,109 @@ flowchart TB
     class POW_O neutral
     style OWN fill:#f1f5f9,stroke:#64748b,color:#0f172a
     style CFG fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+```
+
+## Smart contracts (verified 2026-09-20)
+
+Complete inventory of deployed contracts, verified 2026-09-20 via live `eth_call` /
+`eth_getCode` across the five chains, cross-checked against the official multisig page
+(https://docs.flyingtulip.com/risks/multisigs/, updated 2026-09-16). Every row gives
+role + chain + evidence (live read or official docs).
+
+| Contract | Address | Chain(s) | Role / evidence |
+|---|---|---|---|
+| FT token | `0x5DD1A7A369e8273371d2DBf9d83356057088082c` | ETH / BSC / Base / AVAX / Sonic (same address) | Canonical token; same 10,002-byte runtime on every chain; 18 dec; total 850,062,800.12 FT (2026-09-20). `eth_getCode` |
+| Abandoned test FT | `0x9B15Cce2D9C396B8B840C167374DCe873b2CcE6d` | Sonic | In repo `deployments/sonic-mainnet/FT.json`; "Test name"/"Test symbol"; 9,999,995,990 FT; paused; owner an EOA. Stale artifact, not real supply |
+| PutManager proxy | `0xba49d0ac42f4fba4e24a8677a22218a4df75ebaa` | ETH | EIP-1167 minimal (141 bytes); impl `0x1e4e741e5f0f4f258def137e196871eddae4bf5` (19,098 bytes); msig `0x3518db98cb1fcb19e0c430b3e7f7f74b2a354707`; configurator `0x22246a…`; all 41 contest selectors present |
+| PutManager proxy (same address) | `0xba49d0…` | Sonic | impl `0x90ae2cac15f8d58a258f7b4a243657754469922a` (18,798 bytes); msig `0x1118e1c0…370Cb`; pre-offering (0 supply, sale disabled, transferable false) |
+| FlyingTulipOracle | `0xc8c895e2be9511006287ce02e51b5b198ab36793` | ETH | 2,531 bytes; `ftPerUSD()` = 1,000,000,000 on 1e8 = 10 FT/USD, issuer-pinned; oracle msig `0x1118e1c0…370Cb` |
+| Aave oracle pointer | `0x54586be62e3c3580375ae3723c145253060ca0c2` | ETH | collateral feed pointer |
+| Aave oracle pointer | `0xd63f7658c66b2934bd234d79d06aef5290734b30` | Sonic | collateral feed pointer |
+| ftUSD | `0xf7d85ec4e7710f71992752eac2111312e73e9c9c` | ETH + Sonic | 6 dec, USD-pegged ($1.00); supply 3,913,448.58 ftUSD |
+| sftUSD | `0xD1E5A86f1005F6356Bd022C587dE0f430CD2aeb1` | Sonic | yield wrapper; rewards paid in FT |
+| MultiCollateralDN strategy | `0xe0e445967256ee60111e243e0f0f94dd1d351a59` | ETH | deployed; holds 0 USDC / 0 USDT / 0 aUSDC when checked |
+| Safe — msig + treasury (FT `owner()`) | `0x1118e1c057211306a40A4d7006C040dbfE1370Cb` | all 5 chains | 3-of-5; FT owner; also Ethereum oracle msig and Sonic PutManager msig (docs, 2026-09-16) |
+| Safe — `configurator()` | `0x22246a9183ce2ce6e2c2a9973f94aea91435017c` | all 5 chains | 3-of-4; holds 330,000,000 FT = 38.95% of supply (docs, 2026-09-16) |
+| Safe — yield claimer | `0x333A1ad484b540EcAc1edFa73a066aB57275293C` | — | 2-of-5 (docs, 2026-09-16) |
+| Safe — strategy manager | `0x5557729b169082f07d3131D560E2f2cb5e6c48f6` | — | 3-of-5 (docs, 2026-09-16) |
+| Safe — Ethereum PutManager msig | `0x3518db98cb1fcb19e0c430b3e7f7f74b2a354707` | ETH | PutManager admin; distinct from oracle msig `0x1118e1…` (docs, 2026-09-16) |
+
+## Deployed PutManager state
+
+Ethereum proxy `0xba49d0…` state (live `eth_call`, 2026-09-20). Every figure carries its
+unit; oracle prices are USD 1e8 scale.
+
+| Field | Value |
+|---|---|
+| `saleEnabled` | **false** — sale closed |
+| `transferable` | **true** |
+| `ftACL` | `0x0` — disabled |
+| `ftOfferingSupply` | 427,039,967.11 FT — equals the proxy's own FT balance |
+| `ftAllocated` | 399,436,072.55 FT |
+| `paused` | false |
+| Collateral index | 6 (Ethereum) |
+
+**Collateral index = 6 (Ethereum)** — live oracle prices (USD, 1e8 scale):
+
+| Token | Oracle price (USD 1e8) |
+|---|---|
+| USDC | 0.99985 |
+| WETH | 2,581.74 |
+| USDT | 0.99970 |
+| USDS | 0.99982 |
+| USDtb | 1.00 |
+| USDe | 0.99970 |
+
+**Sonic proxy — pre-offering** (0 supply, sale disabled, transferable false),
+collateral index = 2:
+
+| Token | Address | Oracle price (USD) |
+|---|---|---|
+| USDC | `0x29219dd400f2bf60e5a23d13be72b486d4038894` | 0.99989 |
+| wS | `0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38` | 0.03440 |
+
+## Governance topology — which Safe controls what
+
+Safes from the official multisig page (docs, 2026-09-16); contracts verified live
+2026-09-20. Red edges are the two reason-for-concern flows: the configurator is
+exempt from the pause and sits on 330,000,000 FT, and the oracle msig (the FT-owner
+Safe) can reprice FT at will.
+
+```mermaid
+flowchart TB
+    subgraph SAFES["Safes (Gnosis) - docs 2026-09-16"]
+        OWN["FT owner Safe 0x1118e1...370Cb<br/>3-of-5 - all 5 chains<br/>also: FT oracle msig,<br/>Sonic PutManager msig, treasury"]
+        CFG["configurator Safe 0x22246a...5017c<br/>3-of-4 - all 5 chains<br/>pause-bypass / exempt-from-pause"]
+        PM_MSIG["Ethereum PutManager msig<br/>0x3518db...4707"]
+        YC["yield claimer Safe 0x333A1a...293C<br/>2-of-5"]
+        SM["strategy manager Safe 0x555772...48f6<br/>3-of-5"]
+    end
+
+    subgraph CONTRACTS["Contracts (verified 2026-09-20)"]
+        FTTOKEN["FT token 0x5DD1A7A3...082c<br/>total 850,062,800.12 FT"]
+        PM["PutManager proxy 0xba49d0...5ebaa<br/>closed source"]
+        ORACLE["FlyingTulipOracle 0xc8c895e2...6793"]
+        USD["ftUSD / sftUSD - USD-pegged"]
+        STRAT["MultiCollateralDN strategy 0xe0e44596...51a59<br/>holds 0 USDC / 0 USDT / 0 aUSDC"]
+    end
+
+    OWN -->|"owner() role - setPaused, setName<br/>setSymbol, transferConfigurator"| FTTOKEN
+    OWN -->|"oracle msig - ftPerUSD issuer-pinned<br/>1,000,000,000 on 1e8 = 10 FT per USD<br/>can reprice FT at will"| ORACLE
+    CFG -->|"configurator() role - all 5 chains<br/>exempt-from-pause AND holds<br/>330,000,000 FT = approx 39% of supply"| FTTOKEN
+    PM_MSIG -->|"admin msig (distinct from oracle msig)"| PM
+    YC -->|"yield"| USD
+    SM -->|"deploys / manages"| STRAT
+
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef closed fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    class OWN,PM_MSIG,YC,SM,FTTOKEN,USD good
+    class STRAT warn
+    class ORACLE,CFG bad
+    class PM closed
+    linkStyle 1,2 stroke:#dc2626,color:#7f1d1d
 ```
 
 ## 5. Pause state

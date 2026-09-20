@@ -45,6 +45,12 @@ while preserving principal, unless the gap is filled by **new capital**, by **le
 or by **a token distribution**. That is the whole argument. Everything below is a
 consequence of it.
 
+**Code-level (2026-09-20):** the team's own contest tests confirm the loss, when a
+strategy loses money, is borne **first-come-first-served by PUT users with no
+treasury backstop** — `StrategyLoss.t.sol` runs 10,000 USDC in → 7,500 USDC out
+(2,500 USDC lost to the user), and with two investors #1 exits whole while #2 eats
+the entire loss. Full detail: findings/04.
+
 ```mermaid
 flowchart TB
     A["CLAIM A - the safety claim<br/>Backing capital is NEVER SPENT<br/>safe, liquid, low-risk, NO-LEVERAGE<br/>so Exit-at-par is honoured<br/>quickly in all conditions"]
@@ -411,6 +417,26 @@ Your realised USD return = (FT received) × (price you can exit at). **Both legs
 controlled by the same party.** This is not a yield; it is a discretionary token
 distribution priced by the issuer's own bid.
 
+### Code-level confirmation: the 8x delta hedge is implemented NOWHERE
+
+**New 2026-09-20.** The ftPUT contest-code review of the six strategy adapters finds
+**no delta hedge and no leverage in any of them**. Every strategy is plain
+supply/stake with a single position: AaveStrategy is supply-only (L125),
+StEthStrategy makes one `stETH.submit` (L198), EthenaSUSDeStrategy one
+`sUSDe.deposit` (L224), SparkSUSDSStrategy supplies (L106), HyphaStAVAXStrategy
+stakes (L169), ListaBNBStrategy stakes (L198).
+
+So the founder's description — ftUSD's yield *"is from the delta hedge of stETH/ETH"*,
+*"safe up to 8x"* — is **implemented nowhere in the reviewed code**. "No leverage" is
+true at the contract level *because* the hedge and the looping are absent here; they
+must live in unpublished contracts (the `LeverageRfqEngine` / ftUSD DN stack, which
+the review tree references as LEV-01/MKT-03 but does not contain).
+
+One genuine credit: **EthenaSUSDeStrategy is the only strategy with a robust principal
+guard** — its position tokens are hard-blocklisted so they cannot be spent by a
+privileged caller (L351-356). The other five (Aave/StEth/Hypha) expose their underlying
+token via guarded but gameable `execute()` paths.
+
 ---
 
 ## W-06 — "No leverage, low risk" is not true of the stated venues
@@ -484,6 +510,22 @@ stressed exactly when it is needed, and it weakest at that moment.**
 
 An American put that cannot be settled on demand is not an American put. "100% capital
 protection" and "may require exit queues" cannot both be true claims.
+
+### Code-level confirmation: claims are capped to vault liquidity, and queues are real
+
+**New 2026-09-20.** `PutManager` confirms the liquidity transformation at the code
+level. `maxDivestable` caps a user's USD claim to the vault's actual liquidity
+(`PutManager.sol:483-514`); `divest` **reverts atomically** on any shortfall — there is
+no partial exit — forcing the user onto `divestUnderlying`, which pays out **in-kind
+position tokens** (aTokens, stETH, sUSDe, slisBNB, stAVAX) that can trade below the
+underlying collateral (`PutManager.sol:542-563`).
+
+The unbonding queues are real code paths: StEth routes through the Lido withdrawal
+queue, Lista through FIFO handling, Hypha through unstake, Ethena through a **7-day
+cooldown**. The payout at claim can even be **less than the shares burned**
+(`StEthStrategy.sol:295-302`). So the "instant, perpetual, unconditional, evergreen"
+put is, in code, an **in-kind** redemption whose size is capped by current vault
+liquidity and whose settlement is queued.
 
 ---
 
@@ -580,42 +622,46 @@ flowchart TB
 
 ---
 
-## W-09 — "Oracle-free" removes manipulation resistance, not manipulation incentive
+## W-09 — "Oracle-free" is false: the strike is externally oracle-priced, FT is issuer-priced
 
-Futures are marketed as "oracle-free," and ftUSD as having "no oracles or centralized
-systems." These are framed as safety features.
+**Correction (2026-09-20).** The earlier framing of this finding — that dropping the
+oracle was at least a genuine manipulation-resistance benefit — is now refuted at the
+code level. The system is **not oracle-free at all**, in either direction:
 
-But delta-neutral hedging requires a **reliable mark** on the basis. If the mark comes
-from the protocol's own AMM — a pool with a **$2.1M float** — then:
+- **Collateral is priced by an external oracle.** `PutManager` prices every strike via
+  `FlyingTulipOracle` (0xc8c895e2be9511006287ce02e51b5b198ab36793, live on ETH), which
+  reads Aave's external oracle (0x54586be62e3c3580375ae3723c145253060ca0c2), applying
+  min/max bands but **no staleness check** (`FlyingTulipOracle.sol:84-92`; admitted in
+  AGENTS.md). A stale in-band price fixes every strike at invest.
+- **The FT price is an issuer parameter, not a market price.** FT is a governance
+  `uint64` constant pinned at 10 FT/USD = $0.10 (`FlyingTulipOracle.sol:25`); a live
+  `eth_call` reads exactly 1,000,000,000 on the 1e8 scale, mutable only by the oracle
+  multisig (0x1118e1…).
 
-- the hedge is marked against a price the protocol itself moves through buybacks, and
-- the price is cheap to push for anyone with size.
-
-Removing the external oracle removes the *independent reference*, which is the thing
-that makes manipulation expensive. It does not remove the incentive to manipulate; it
-reduces the cost of doing so.
+So "oracle-free" is false in both directions: the **collateral** is priced by an
+external oracle with no freshness check, and the **FT** that pays yields and settles
+claims is priced by the issuer's own multisig. The earlier concern was directionally
+right but understated the problem: the independent reference is not absent — it is
+split between a stale external oracle and the issuer's own hand.
 
 ---
 
 ```mermaid
 flowchart TB
-    CLAIM["MARKETED AS A SAFETY FEATURE<br/>Futures are oracle-free<br/>ftUSD has no oracles or centralized systems"]
+    CLAIM["THE CLAIM - FALSE<br/>Futures are oracle-free<br/>ftUSD has no oracles or centralized systems"]
 
-    CLAIM --> BENEFIT["Genuine benefit<br/>removes oracle manipulation and<br/>oracle downtime as attack surfaces"]
+    CLAIM --> COLLAT["COLLATERAL SIDE<br/>PutManager prices every strike via<br/>FlyingTulipOracle 0xc8c8...693<br/>live on ETH, 1e8 scale"]
 
-    CLAIM --> NEED["But delta-neutral hedging<br/>REQUIRES a reliable mark on the basis"]
+    COLLAT --> NOFRESH["reads Aave's EXTERNAL oracle<br/>0x5458...ca0c2<br/>min/max bands but NO staleness check<br/>FlyingTulipOracle.sol:84-92 - AGENTS-admitted<br/>stale in-band price fixes every strike at invest"]
 
-    NEED --> SRC{"Where does the mark come from?"}
+    CLAIM --> FTPRICE["FT SIDE<br/>FT price is a governance uint64 constant<br/>pinned at 10 FT per USD = 0.10 USD<br/>FlyingTulipOracle.sol:25"]
 
-    SRC -->|"the protocol's own AMM"| POOL["A pool with a 2.1M float"]
+    FTPRICE --> MSIG["live eth_call reads exactly 1,000,000,000<br/>on the 1e8 scale<br/>mutable only by the oracle multisig 0x1118e1...<br/>FT is priced by the ISSUER'S OWN HAND"]
 
-    POOL --> C1["The hedge is marked against a price<br/>the protocol itself moves through buybacks"]
-    POOL --> C2["The price is cheap to push<br/>for anyone with size"]
+    NOFRESH --> VERDICT["ORACLE-FREE IS FALSE BOTH WAYS"]
+    MSIG --> VERDICT
 
-    C1 --> VERDICT["Removing the external oracle removes the<br/>INDEPENDENT REFERENCE - which is the thing<br/>that makes manipulation expensive"]
-    C2 --> VERDICT
-
-    VERDICT --> FINAL["It does NOT remove the incentive to manipulate<br/>it REDUCES THE COST of doing so"]
+    VERDICT --> FINAL["collateral priced by an external oracle<br/>with no freshness check; FT priced<br/>by the issuer's own multisig - the<br/>independent reference is split<br/>between a stale oracle and the issuer"]
 
     classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -623,9 +669,9 @@ flowchart TB
     classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
     class CLAIM claim
-    class NEED,SRC,POOL neutral
-    class BENEFIT good
-    class C1,C2,VERDICT,FINAL bad
+    class COLLAT,FTPRICE neutral
+    class NOFRESH,MSIG warn
+    class VERDICT,FINAL bad
 ```
 
 ## What is genuinely good

@@ -58,9 +58,14 @@ number behind `FT.sol`.
 
 ## Headline conclusions
 
-1. **The published code is fine; the important code is not published.** `FT.sol` is
-   competent — no arithmetic, reentrancy, or signature-replay bugs found. But
-   `PutManager`, the contract holding 100% of backing capital, is **closed source**.
+1. **The published code is fine; the important code is not published by the team — it
+   was Sherlock-contested (Jan 2026, 1,704 submissions) but no findings were ever
+   released; this repo now reviews it (`findings/04`).** `FT.sol` is competent — no
+   arithmetic, reentrancy, or signature-replay bugs found. `PutManager`, the contract
+   holding 100% of backing capital, is never published officially, but was reviewed in
+   **Sherlock contest #1223** (Jan 2026, 1,704 watson submissions on
+   `flyingtulipdotcom/ftPUT`); judging halted at ~2% and no findings were ever released.
+   [`findings/04-ftput-putmanager.md`](findings/04-ftput-putmanager.md) audits it.
 2. **Best contract finding: `Escrow.withdraw()` bypasses the contract's only
    protection.** It excludes just the denomination token, so the owner can withdraw the
    FT deposited for the investor. The "escrow" is one-sided custody.
@@ -75,7 +80,9 @@ number behind `FT.sol`.
    stETH/ETH … safe up to 8x"* — is the leverage the no-leverage mandate forbids. On the
    founder's $51M backing, the yield-funded surplus after first-call opex is zero to
    negative. The buyback that scales is funded by **other holders' principal**, executing
-   into a **$2.1M float** the founder himself quotes.
+   into a **$2.1M float** the founder himself quotes. **The strategy layer contains no
+   leverage and no delta hedge anywhere in code; the founder's 8x hedge is implemented
+   nowhere in the reviewed contracts.**
 4. **Docs say 10B supply; chain says 850M and shrinking** (1.199B at first read, −29% in
    18 days). The 8.8B reconciliation is disclosed **only in the founder's X posts**
    (8.79B unallocated burned) — the documentation was never updated.
@@ -87,13 +94,15 @@ number behind `FT.sol`.
 - `findings/01-FT-token.md` — FT.sol review + attack path
 - `findings/02-Escrow.md` — Escrow.sol review
 - `findings/03-economics-high-yield.md` — the yield critique
+- `findings/04-ftput-putmanager.md` — ftPUT protocol: PutManager, strategies, wrapper,
+  oracle, CircuitBreaker (Sherlock contest #1223 codebase)
 - `contracts/` — upstream source (cloned from `github.com/flyingtulipdotcom`)
 - `scripts/keccak.py` — pure-Python keccak-256 used to verify EIP-712 typehashes
 - `scripts/lint_mermaid.py` — dependency-free linter for the diagrams in these docs
 
 ## Reading the diagrams
 
-There are 36 Mermaid diagrams across these documents. They are colour-coded, and the
+There are 43 Mermaid diagrams across these documents. They are colour-coded, and the
 colours are the argument:
 
 | Colour | Meaning |

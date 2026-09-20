@@ -260,7 +260,36 @@ Load-bearing statements, harvested read-only 2026-09-20:
 | 2026-09-16 | "ftUSD does carry additional risk, **the yield is from the delta hedge of stETH/ETH** … you do carry the additional native asset and staked asset derivative risk." | [post](https://x.com/AndreCronjeTech/status/2100294840986562825) |
 | 2026-09-18 | "**8% - 12% stable yield** on USDC/USDT … $1.2m bb & burn … $2m mcap $48m fdv. All pure onchain." | [post](https://x.com/AndreCronjeTech/status/2100958345959964837) |
 
-## 5. What is actually open source
+## 5. Token & denomination glossary
+
+Every token/coin referenced in this audit, with its chain(s), decimals, unit/peg, and
+role. Monetary figures elsewhere in this repo carry these units explicitly; this table
+is the single source for what each unit means.
+
+| Token | Chain(s) | Decimals | Unit / peg | Role |
+|---|---|---|---|---|
+| **FT** | ETH, BSC, Base, AVAX, Sonic | 18 | USD-priced; market ≈ **$0.108 USD**; issuer-pinned at oracle **10 FT per USD = $0.10 USD** | Protocol token; buyback-and-burn target; sftUSD reward currency |
+| **pFT** (ftPUT NFT) | all PUT chains | — | Position NFT; amounts in **FT + collateral-token units**; strike in **USD, oracle 1e8 scale** | Perpetual PUT position; grants par-protected exit |
+| **ftUSD** | ETH, Sonic | 6 | Pegged **1.00 USD** | Delta-neutral stablecoin |
+| **sftUSD** | ETH, Sonic | 6 | Staked ftUSD; **rewards paid in FT** | Yield-bearing staked ftUSD |
+| **Wrapper shares** | per collateral | — | **1:1 with principal** in token-native units; "not a share", **no yield embedded** | ftYieldWrapper position accounting |
+| **Strategy shares** | per strategy | — | **1:1 with principal**; `valueOfCapital ≥ totalSupply` invariant | Strategy position accounting |
+| **aToken** (aUSDC etc.) | per venue | mirrors underlying | Mirrors underlying | Aave position token; yield accrues here |
+| **stETH** | ETH | 18 | ~1 ETH; **code assumes 1 stETH == 1 ETH** | Lido staked ETH (StEthStrategy) |
+| **stAVAX** | AVAX | AVAX-denominated | AVAX-denominated; **unbonding queue** | Hypha staked AVAX (HyphaStAVAXStrategy) |
+| **slisBNB** | BSC | BNB-denominated | BNB-denominated **via rateProvider**; oracle-priced | Lista staked BNB (ListaBNBStrategy) |
+| **sUSDe** | ETH | ERC-4626 over USDe (USD) | USD; **7-day cooldown** | Ethena staked USDe (EthenaSUSDeStrategy) |
+| **sUSDS** | ETH | ERC-4626 over USDS (USD) | USD | Spark/Sky staked USDS (SparkSUSDSStrategy) |
+| **wETH / wBNB / wS** | ETH / BSC / Sonic | native | Native-denominated | Wrapped native collateral |
+| **USDC, USDT, USDS, USDtb, USDe** | ETH (6 live); Sonic: USDC, wS | 6 | **USD-pegged**; oracle **1e8 scale** | Collateral stables |
+| **CRV / CVX** | ETH | 18 | USD-priced | Third-party incentive tokens |
+| **Contest / bounty money** | — | USDC | **76,500 USDC** prize pool | Sherlock contest #1223 prize |
+
+> Units note: the oracle prices collateral in **USD at 1e8 scale** (i.e. 1.00 USD =
+> 1e8 oracle units); FT is priced in USD at market but pinned by the issuer at
+> 10 FT per USD. All monetary figures in this repo are stated with their unit.
+
+## 6. What is actually open source
 
 | Repo | Contents |
 |---|---|
@@ -290,7 +319,7 @@ flowchart TB
         P7["PositionsManager"]
     end
 
-    COV["Public coverage of the closed half:<br/>Sherlock bug bounty only<br/>no published audit report"]
+    COV["Public coverage of the closed half:<br/>Sherlock contest #1223 ran 2026-01-05 to 17<br/>judging stopped 2026-03-16 at 2%<br/>NO findings ever published"]
 
     PUB -->|"documents risks in"| PRIV
     PRIV --> COV
@@ -312,5 +341,85 @@ custodies all user collateral is unreviewed by the public.
 timelocks. **None of that code is public.** The contract that custodies 100% of the
 backing capital — `PutManager` — cannot be reviewed by the public; it is covered only
 by a Sherlock bug bounty.
+
+### The Sherlock contest — reviewed, but no output published
+
+**Correction to the earlier framing.** The protocol was *not* merely "never published /
+covered only by a bug bounty". A full Sherlock contest **did** run on the core
+`ftPUT` codebase in January 2026 — the code was reviewed by 1,704 watson submissions —
+but **no findings were ever published** and the code remains unpublished anywhere
+official. Verified facts (Sherlock API + docs, 2026-09-20):
+
+- **Contest:** [Sherlock #1223 "Flying Tulip"](https://audits.sherlock.xyz/contests/1223),
+  ran **2026-01-05 → 01-17**, prize pool **76,500 USDC** (lead senior auditor
+  pkqs90, 17,000 USDC; lead judge mstpr-brainbot, 5,000 USDC), **1,704 raw watson
+  submissions**.
+- **Scope (in):** `PutManager`, `ftYieldWrapper`, `CircuitBreaker`, `pFT`, `ftACL`,
+  `FlyingTulipOracle`, `AaveStrategy` + interfaces — **1,648 nsloc** at commit
+  `193074610…` (vendored at `contracts/sherlock-2026-01-ftput/`).
+- **Out of scope:** the other 5 strategies, `pFTMarketplace`, `LeverageRfqEngine`,
+  `PositionsManager`.
+- **Outcome:** judging stopped **2026-03-16 at ~2%** (`judging_progress: 0.0205`);
+  `report: null` — **no findings ever published**.
+- **Still unpublished:** the official org has only the 4 repos above;
+  `flyingtulipdotcom/ftPUT` → **404**. The docs audits page (updated 2026-09-16) still
+  says **"Audit firm(s): TBA"** — no mention of the contest.
+
+```mermaid
+flowchart TB
+    subgraph SCOPE["CONTEST SCOPE - Sherlock #1223<br/>1,648 nsloc, commit 193074610"]
+        direction LR
+        S1["PutManager"]
+        S2["ftYieldWrapper"]
+        S3["CircuitBreaker"]
+        S4["pFT"]
+        S5["ftACL"]
+        S6["FlyingTulipOracle"]
+        S7["AaveStrategy"]
+    end
+
+    subgraph OUT["OUT OF SCOPE - named in KNOWN_ISSUES.md"]
+        direction LR
+        O1["other 5 strategies"]
+        O2["pFTMarketplace"]
+        O3["LeverageRfqEngine"]
+        O4["PositionsManager"]
+    end
+
+    subgraph NEVER["NEVER AVAILABLE - closed source"]
+        direction LR
+        N1["YieldClaimer"]
+        N2["ftDNMM"]
+        N3["strategy-management roles<br/>and timelocks"]
+    end
+
+    SCOPE -->|"1,704 watson submissions<br/>2026-01-05 to 17"| JUDGE["Judging stopped 2026-03-16 at 2%<br/>report: null"]
+    JUDGE -->|"no findings published"| NONE["NO audit output exists publicly<br/>undisclosed findings may or may not<br/>have been fixed before production"]
+    OUT --> NONE
+    NEVER --> NONE
+
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef closed fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    style SCOPE fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    class S1,S2,S3,S4,S5,S6,S7 good
+    class O1,O2,O3,O4 warn
+    class N1,N2,N3 closed
+    class JUDGE,NONE bad
+    linkStyle 1 stroke:#dc2626,stroke-width:2px
+```
+
+**Coverage summary.** The contest-scope contracts (green, inside the **blue** contest
+box) were reviewed by this repo
+now and by 1,704 watson submissions in January 2026; the out-of-scope contracts (amber)
+were named but never contest-reviewed; the never-available contracts (purple) remain
+closed source. The red edge is the operative fact: **judging stopped at 2% and no
+findings were published** — so even the reviewed surface has no public audit output.
+The code WAS reviewed, yet no audit result exists publicly, and undisclosed findings
+may or may not have been fixed before production. (On-chain supply, distribution and
+market figures live in [`02-onchain-facts.md`](02-onchain-facts.md); this section
+covers only coverage.)
 
 Bug bounty: https://audits.sherlock.xyz/bug-bounties/248
