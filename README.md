@@ -1,7 +1,9 @@
 # flying-tulip-audit
 
 Independent security + economic review of **Flying Tulip** (Andre Cronje).
-Date: 2026-09-02.
+Date: 2026-09-02. Updated: 2026-09-20 (supply, market data, backing size and the APY
+analysis re-verified against live RPC, current docs, and the founder's public X
+statements — corrections applied in place).
 
 **Start here:** [`reports/FINAL_REPORT.md`](reports/FINAL_REPORT.md)
 
@@ -33,7 +35,7 @@ flowchart TB
     INV --> ESC
     ESC -->|"FT delivered"| FTC
     FTC --> PUT
-    FTC -.->|"54% of supply"| PM
+    FTC -.->|"39% of supply"| PM
     PM --> BACK
     BACK -->|"native yield ~3%"| TREAS
     TREAS ==>|"FIRST CALL"| OPEX
@@ -65,12 +67,18 @@ number behind `FT.sol`.
    *(Prior art: PeckShield PVE-002, rated Low — they recommended disclosure, not a fix.)*
    Also new: **the deployed source no longer matches the audited checksum (E-09)**, while
    the README still claims it is preserved "to keep the audited source exactly."
-3. **The yield reasoning has a hard ceiling.** If principal is truly never spent and
-   unlevered, yield is at most the ~3% the collateral earns (their own benchmark
-   table), minus the team's operating budget, which takes **first call**. Realistic
-   surplus is ~0.16% of FDV. The buyback that actually scales is funded by **other
-   holders' principal**, and it executes into a **$2.1M float**.
-4. **Docs say 10B supply; chain says 1.199B.** An ~8.8B gap.
+3. **The advertised APY is paid — but it is not a yield.** sftUSD measurably pays
+   7-12% (daily since 2026-05-30) — yet its organic base is **0%**: the entire payout is
+   **FT-token rewards bought on the open market, distributed at treasury discretion**.
+   The yield-bearing story behind it fails twice over: unlevered collateral caps at
+   ~3-4.7% (live data), and the founder's own scaling path — *"delta hedge of
+   stETH/ETH … safe up to 8x"* — is the leverage the no-leverage mandate forbids. On the
+   founder's $51M backing, the yield-funded surplus after first-call opex is zero to
+   negative. The buyback that scales is funded by **other holders' principal**, executing
+   into a **$2.1M float** the founder himself quotes.
+4. **Docs say 10B supply; chain says 850M and shrinking** (1.199B at first read, −29% in
+   18 days). The 8.8B reconciliation is disclosed **only in the founder's X posts**
+   (8.79B unallocated burned) — the documentation was never updated.
 
 ## Structure
 
@@ -79,14 +87,13 @@ number behind `FT.sol`.
 - `findings/01-FT-token.md` — FT.sol review + attack path
 - `findings/02-Escrow.md` — Escrow.sol review
 - `findings/03-economics-high-yield.md` — the yield critique
-- `reports/2026-09-20-apy-reverification.md` — **are the advertised APYs true?** Six-agent adversarial swarm + founder-X re-verification, 18 days later
 - `contracts/` — upstream source (cloned from `github.com/flyingtulipdotcom`)
 - `scripts/keccak.py` — pure-Python keccak-256 used to verify EIP-712 typehashes
 - `scripts/lint_mermaid.py` — dependency-free linter for the diagrams in these docs
 
 ## Reading the diagrams
 
-There are 38 Mermaid diagrams across these documents. They are colour-coded, and the
+There are 36 Mermaid diagrams across these documents. They are colour-coded, and the
 colours are the argument:
 
 | Colour | Meaning |
@@ -110,7 +117,10 @@ python scripts/lint_mermaid.py
 ## Method
 
 Manual source review plus live RPC verification across Ethereum, BSC, Base, Avalanche
-and Sonic. All on-chain numbers in `research/02-onchain-facts.md` were read live and are
+and Sonic (first read 2026-09-02). Re-verified 2026-09-20: live RPC re-reads, live
+venue/market data, current docs (incl. Wayback), and a read-only harvest of the
+founder's public X statements, cross-checked by an adversarial multi-agent swarm.
+All on-chain numbers in `research/02-onchain-facts.md` were read live and are
 reproducible.
 
 ## Disclaimer

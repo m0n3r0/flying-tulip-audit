@@ -1,9 +1,11 @@
 # Flying Tulip — Protocol Overview
 
 Andre Cronje's "full-stack on-chain exchange". Compiled from official docs
-(`docs.flyingtulip.com`), the `flyingtulipdotcom` GitHub org, and on-chain state.
+(`docs.flyingtulip.com`), the `flyingtulipdotcom` GitHub org, on-chain state, and the
+founder's public X statements.
 
-**Compiled:** 2026-09-02
+**Compiled:** 2026-09-02. **Updated:** 2026-09-20 (marketed APY escalation, measured
+sftUSD payouts, founder statements, points/rewards programs).
 
 ---
 
@@ -15,7 +17,7 @@ Andre Cronje's "full-stack on-chain exchange". Compiled from official docs
 | Headline token valuation | **$1B** | press (The Block) |
 | Public sale ("Capital Allocation") | On-chain, at same valuation | docs |
 | Primary issue rate | **10 FT per $1** → implied **$0.10 / FT** | docs |
-| Stated max supply | **10,000,000,000 FT**, pre-minted at deployment | docs |
+| Stated max supply | **10,000,000,000 FT**, pre-minted at deployment | docs — **stale**, see [`02-onchain-facts.md`](02-onchain-facts.md) (chain: 850M; burn disclosed on X) |
 
 ## 2. The core invention: the Perpetual PUT
 
@@ -91,6 +93,11 @@ Value does **not** flow to holders as cash. It flows as **buyback-and-burn**:
 **does not unlock anything**; they just reduce supply. **Revenue-funded** burns unlock
 Foundation/Team/Incentives 1:1 at **40:40:20**."
 
+Scale check (founder's own numbers, 2026-08): PUT backing **$50.95M** → gross carry at
+3.5% ≈ **$1.8M/yr**, before the ecosystem budget's first call. Protocol revenue
+**$143K per 30 days** (≈ $1.7M/yr annualised). Cumulative buyback-and-burn **$1.2M**
+(2026-09-18).
+
 ```mermaid
 flowchart TB
     subgraph SRC["Three stated funding sources"]
@@ -99,15 +106,15 @@ flowchart TB
         C["C. Backing capital released on Withdrawal"]
     end
 
-    GROSS["Gross yield on backing capital<br/>~3.5% on ~120M = ~4.2M/yr"]
+    GROSS["Gross yield on backing capital<br/>~3.5% on ~51M = ~1.8M/yr<br/>backing per founder, 2026-08-10"]
 
     GROSS --> OPEX{"Ecosystem budget<br/>takes FIRST CALL"}
-    OPEX -->|"consumes most of it<br/>salaries, marketing, infra, ops"| RESID["Residual surplus<br/>~0.2M/yr = 0.16% of FDV"]
+    OPEX -->|"consumes it plausibly in full<br/>salaries, marketing, infra, ops"| RESID["Residual surplus<br/>zero to negative"]
     OPEX -->|"if budget absorbs all"| ZERO["No surplus<br/>no buyback from this source"]
 
     RESID --> A
     A --> BURN["Buyback and burn FT"]
-    B -->|"real but currently trivial<br/>265K/day volume, 688 holders"| BURN
+    B -->|"real but small<br/>143K per 30d revenue<br/>1.2M cumulative burn"| BURN
     C ==>|"THE ONE THAT ACTUALLY SCALES"| BURN
 
     C -.->|"this is someone's PRINCIPAL,<br/>not yield"| NOTE["Transfer from leavers<br/>to remaining holders"]
@@ -126,67 +133,84 @@ flowchart TB
     class UN40 good
 ```
 
-Note the shape of that: source **A** is a *residual* behind the operating budget, source
-**B** is currently trivial, and source **C** — the one that scales — is principal, not
-yield. See [`W-02`](../findings/03-economics-high-yield.md#w-02--the-buyback-is-funded-mainly-by-principal-not-by-yield)
+Note the shape of that: source **A** is a *residual* behind the operating budget on a
+~$51M base, source **B** is real but small, and source **C** — the one that scales — is
+principal, not yield. See [`W-02`](../findings/03-economics-high-yield.md#w-02--the-buyback-is-funded-mainly-by-principal-not-by-yield)
 and [`W-04`](../findings/03-economics-high-yield.md#w-04--the-yield-is-junior-to-the-teams-operating-budget).
 
-## 4. Product suite
+## 4. Product suite — claims vs. what is live
 
-| Product | Claim |
+| Product | Claim (2026-09-20) |
 |---|---|
-| **ftUSD** | "Generates **7-8% APY** through delta-neutral strategies while maintaining a perfect $1 peg" (marketing site) |
+| **ftUSD** | Marketing site: *"delta-neutral stablecoin maintaining $1 peg while **auto-generating 8-12% APY**"* (escalated from 7-8% since the first read). Docs product-suite page: *"generates **7-8% APY** through delta-neutral strategies while maintaining a perfect $1 peg"* |
 | **sftUSD** | Staked ftUSD. Only staked version accrues yield. Rewards paid **in FT**, claimed from a rewards vault, **no auto-compounding** |
 | **Trade** | Volatility-adaptive pools (ftDNMM) |
 | **Futures** | "Oracle-free" perps, <500ms, soft liquidations |
 | **Lend** | Any-asset-against-any-collateral, dynamic LTV |
 | **Insure** | Pay-as-you-go protection |
 
-### ftUSD reality check (from the docs themselves)
-- **Stage 0 (live): ftUSD is just a USDC/USDT → Aave wrapper.** That is the *only*
-  implemented on-chain strategy.
-- Delta-neutral carry is **Stage 3+** — roadmap, not deployed.
-- Docs' own benchmark table (Ethereum): Aave v3 USDC **3.50%**, Aave v3 USDT **2.56%**,
-  Compound v3 USDC **3.52%**, Lido stETH **2.55%**.
-- The **7-8% figure does not appear anywhere in the documentation.**
-- Illustrative pipeline for the future delta-neutral leg: supply USDC → borrow S →
-  stake to stS → *"loop collateral prudently (e.g. deposit stS back to the money
-  market) to increase safety buffers and carry"* — i.e. **looping = leverage**.
-- "Unstaked ftUSD receives no yield; proceeds accrue to the **protocol treasury**."
-- "All net strategy yield and protocol fee revenue is collected by the protocol
-  treasury; then **at treasury discretion** distributed via buyback-and-distribute."
+### ftUSD reality check — measured, not just documented (2026-09-20)
 
-#### The 7-8% gap
+**Deployed:** ftUSD is live — **3,913,448.58 supply** on Ethereum
+(`0xf7d85ec4e7710f71992752eac2111312e73e9c9c`, 6 decimals), plus a Sonic deployment.
+**Measured payout:** sftUSD stakers earn **7.87%** (Ethereum, $1.84M TVL) and **11.36%**
+(Sonic, $378K TVL), daily since 2026-05-30 (DeFiLlama, on-chain-derived). **But the
+entire measured APY is FT-token rewards** ("bought on open market") — **base/organic
+APY is 0**. Docs' own benchmark table (Ethereum): Aave v3 USDC **3.50%**, Aave v3 USDT
+**2.56%**, Compound v3 USDC **3.52%**, Lido stETH **2.55%**.
+
+**The strategy contradiction.** The docs — updated **2026-09-16** — still say: *"At
+launch, ftUSD is a USDC/USDT to Aave wrapper (Stage 0)"* and *"**The only on-chain
+strategy currently implemented is stablecoin lending via Aave**"*; delta-neutral is
+tagged roadmap (Stage 3+). The founder says the opposite: *"Delta Neutral on Ethereum
+activated for ftUSD"* (2026-06-17), and (2026-09-16, asked about risk vs Aave):
+*"ftUSD does carry additional risk, **the yield is from the delta hedge of stETH/ETH**
+(on ethereum or stS/S on Sonic), so you do carry the additional native asset and staked
+asset derivative risk."* The project's own artifacts contradict each other; the
+"MultiCollateralDN" strategy contract is deployed but holds **0** of its named assets on
+direct `eth_call`. At most: DN is live at ~$5M, undocumented.
+
+**The leverage path.** Founder, 2026-08-21: *"DN scaling up, **still only 1x, safe up to
+8x**."* And 2026-08-25: *"New stable invariant version will allow **looping**. At current
+Lend rates would be **+9% per loop**."* Scaling the advertised yield to the announced
+$100M caps requires the leverage the "no-leverage" backing mandate forbids.
+
+**Distribution mechanics (docs' own words):** *"All net strategy yield and protocol fee
+revenue is collected by the protocol treasury; then **at treasury discretion**
+distributed via buyback-and-distribute."* *"Unstaked ftUSD receives no yield; proceeds
+accrue to the protocol treasury."* New since first read: **Points** (2026-09-16,
+*"redeemable anytime… claim of all future revenue"*) and **Rewards** (2026-09-18,
+*"20% of protocol revenue used to buy FT from the open market"*).
+
+#### The APY claim vs. the measured reality
 
 ```mermaid
 flowchart TB
-    CLAIM["MARKETING SITE<br/>ftUSD generates 7-8% APY<br/>delta-neutral, perfect 1 dollar peg"]
+    CLAIM["MARKETING SITE - TODAY<br/>auto-generating 8-12% APY<br/>escalated from 7-8% since first read"]
 
-    REAL["DOCS STAGE 0 - WHAT IS LIVE<br/>ftUSD is a USDC/USDT to Aave wrapper<br/>the only implemented strategy"]
+    DOCS["DOCS - product-suite page<br/>7-8% APY through delta-neutral<br/>perfect 1 dollar peg"]
 
-    BENCH["DOCS OWN BENCHMARK TABLE<br/>Aave USDC 3.50% / Compound USDC 3.52%<br/>Aave USDT 2.56% / Lido stETH 2.55%"]
+    PAID["MEASURED - DeFiLlama on-chain derived<br/>sftUSD 7.87% ETH on 1.84M TVL<br/>11.36% Sonic on 378K TVL<br/>paid daily since 2026-05-30"]
 
-    CLAIM --> GAP{"Gap<br/>7-8% claimed<br/>vs 2.55-3.52% available"}
-    BENCH --> GAP
-    REAL --> GAP
+    BUT["BUT base APY = 0<br/>100% is FT-token rewards<br/>bought on open market<br/>distributed at treasury discretion"]
 
-    GAP --> Q{"What fills the gap?"}
+    CLAIM --> PAID
+    DOCS --> PAID
+    PAID --> BUT
 
-    Q -->|"Option 1"| LEV["Loop collateral prudently<br/>deposit stS back to money market<br/>roughly 2.5x looping"]
-    Q -->|"Option 2"| FWD["A forward-looking target<br/>delta-neutral is Stage 3+<br/>not deployed"]
-
-    LEV --> C1["CONTRADICTION<br/>Looping is leverage<br/>backing mandate says no leverage"]
-    FWD --> C2["CONTRADICTION<br/>Marketed in present tense<br/>as a live APY"]
+    BUT --> SCALE{"What does it cost<br/>and can it scale?"}
+    SCALE -->|"today: ~190K/yr payouts<br/>vs 1.7M/yr revenue"| OK["AFFORDABLE NOW<br/>only because staked base is 2.2M"]
+    SCALE -->|"at announced 100M caps<br/>8-12% = 8-12M/yr"| NO["5-7x ALL protocol revenue<br/>founder's own path: leverage to 8x<br/>which the mandate forbids"]
 
     classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
     classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
-    class CLAIM claim
-    class REAL,BENCH,GAP,Q neutral
-    class LEV,FWD warn
-    class C1,C2 bad
+    class CLAIM,DOCS claim
+    class PAID,OK good
+    class BUT warn
+    class SCALE,NO bad
 ```
 
 #### What the "yield" is actually paid in
@@ -201,7 +225,7 @@ flowchart LR
     D -->|"staked ftUSD only"| FT["Rewards paid in FT<br/>claimed from rewards vault<br/>no auto-compounding"]
     D -->|"unstaked ftUSD"| NONE["Receives NO yield<br/>proceeds accrue to<br/>the protocol treasury"]
 
-    FT --> MKT["To realise USD you must sell FT<br/>into a 2.1M float<br/>on 265K/day of volume"]
+    FT --> MKT["To realise USD you must sell FT<br/>into a 2M float<br/>on ~265K/day of volume"]
     MKT --> PRICE["The same party sets the buyback bid<br/>and the reward rate"]
 
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -215,6 +239,26 @@ flowchart LR
 
 Realised USD return = (FT received) x (price you can exit at). Both legs are controlled by
 the same party. That is a discretionary token distribution, not a yield.
+
+### Founder statements on record (X, `@AndreCronjeTech`)
+
+The founder's old handle `@AndreCronje` is **suspended**; he posts as
+**`@AndreCronjeTech`** ("Founder @flyingtulip_. Creator of Yearn + Keep3r…").
+Load-bearing statements, harvested read-only 2026-09-20:
+
+| Date | Statement | Link |
+|---|---|---|
+| 2026-02-09 | "whatever is raised is deployed into **low risk yield (currently 100% into Aave)**. This allows the depositor to get their full refund at any time." | [post](https://x.com/AndreCronjeTech/status/2020864718630519238) |
+| 2026-06-17 | "**Delta Neutral on Ethereum activated for ftUSD.** ~$4m TVL, forward projection ~9%, should only drop to ~6% post $20m tvl." | [post](https://x.com/AndreCronjeTech/status/2067299647400391037) |
+| 2026-07-24 | "ftUSD has maintained its **> 7% APY target / anchor for 3 consecutive months**" | [post](https://x.com/AndreCronjeTech/status/2080636235421220896) |
+| 2026-08-03 | "**Burned unallocated 9bn FT** bringing FDV to 100m." | [post](https://x.com/AndreCronjeTech/status/2084252341222396227) |
+| 2026-08-10 | "**8.79bn unallocated FT permanently burned** … **$50.95m in PUT backing capital** … $1.14m in cumulative yield" | [post](https://x.com/AndreCronjeTech/status/2086806388114690269) |
+| 2026-08-21 | "ftUSD earning 10% stable now for 3 months @ $5m. **DN scaling up, still only 1x, safe up to 8x.**" | [post](https://x.com/AndreCronjeTech/status/2090797766163177578) |
+| 2026-08-26 | "$12.12m TVL … $3.86m in active loans … **$149k in 30-day fees … $143k in 30-day protocol revenue**" | [post](https://x.com/AndreCronjeTech/status/2092685779755499832) |
+| 2026-09-07 | "**$2m mcap** $40m absolute max (assuming all PUT holders withdraw FT)" | [post](https://x.com/AndreCronjeTech/status/2097007707110711717) |
+| 2026-09-15 | "USDC & USDT earning **8.68% stable now for over 6 months** on Ethereum … pure onchain DN." | [post](https://x.com/AndreCronjeTech/status/2099924067675430938) |
+| 2026-09-16 | "ftUSD does carry additional risk, **the yield is from the delta hedge of stETH/ETH** … you do carry the additional native asset and staked asset derivative risk." | [post](https://x.com/AndreCronjeTech/status/2100294840986562825) |
+| 2026-09-18 | "**8% - 12% stable yield** on USDC/USDT … $1.2m bb & burn … $2m mcap $48m fdv. All pure onchain." | [post](https://x.com/AndreCronjeTech/status/2100958345959964837) |
 
 ## 5. What is actually open source
 

@@ -1,59 +1,72 @@
 # Flying Tulip — Verified On-Chain Facts
 
-All values were read live from public RPCs on **2026-09-02**. Reproduce with the
-commands in `scripts/`.
+Values were first read live from public RPCs on **2026-09-02** and re-verified on
+**2026-09-20** (raw JSON-RPC `eth_call`/`eth_getCode` on all five chains). Where the two
+reads differ, the 2026-09-20 value is authoritative and the change is noted. Reproduce
+with the commands in `scripts/`.
 
 Canonical FT token: **`0x5DD1A7A369e8273371d2DBf9d83356057088082c`**
-(identical address on Ethereum, BSC, Base, Avalanche, Sonic).
+(identical address — and identical 10,002-byte runtime — on Ethereum, BSC, Base,
+Avalanche, Sonic).
 
 ---
 
-## 1. Supply — docs say 10B, chain says ~1.2B
+## 1. Supply — docs say 10B, chain says 850M and shrinking
 
-`totalSupply()` per chain:
+`totalSupply()` per chain (2026-09-20):
 
-| Chain | FT total |
-|---|---|
-| Ethereum | 1,196,643,745.86 |
-| Sonic | 1,979,127.96 |
-| Base | 16,622.64 |
-| BNB Chain | 241.37 |
-| Avalanche | 0.00 |
-| **Total (EVM)** | **1,198,639,737.83 FT** |
+| Chain | FT total (2026-09-20) | FT total (2026-09-02) |
+|---|---|---|
+| Ethereum | 847,330,958.55 | 1,196,643,745.86 |
+| Sonic | 2,714,977.56 | 1,979,127.96 |
+| Base | 16,622.64 | 16,622.64 |
+| BNB Chain | 241.37 | 241.37 |
+| Avalanche | 0.00 | 0.00 |
+| **Total (EVM)** | **850,062,800.12 FT** | **1,198,639,737.83 FT** |
 
-**Stated max supply: 10,000,000,000 FT. Gap: ≈ 8.80B FT (88%).**
+**Stated max supply: 10,000,000,000 FT.** Supply fell **−348,576,937.71 FT (−29%) in 18
+days**, concentrated on Ethereum.
 
 The docs assert *"maximum supply of 10 billion, minted at deployment"*, *"no
 additional minting"*, and *"totalSupply stays at 10B, only the split between
-circulating and non-circulating supply changes."* On-chain total is ~1.199B.
+circulating and non-circulating supply changes."* None of that matches the chain: supply
+was 1.199B at first read and is 850M now.
 
-At the stated **10 FT per $1** rate, 1,198,639,737 FT implies **≈ $119.9M of
-contributions** — *below* the publicly claimed **$200M private round** on its own.
+**Where the ~8.8B went — disclosed on X, not in the docs.** The founder stated on
+2026-08-03: *"Burned unallocated 9bn FT bringing FDV to 100m"*, and on 2026-08-10:
+*"8.79bn unallocated FT permanently burned."* The burn is real and publicly acknowledged
+([posts](https://x.com/AndreCronjeTech/status/2084252341222396227));
+the documentation was never updated. Burns are ongoing: the 18-day −348.6M move combines
+further unallocated burns from the configurator's own balance with revenue-funded
+buyback-and-burn (founder, 2026-09-17: *"From bb&burn, not non-circ."*; cumulative
+buyback $1.2M per founder, 2026-09-18).
 
-> Caveat: I could not fully reconstruct the mint/burn history (public RPCs cap
-> `eth_getLogs` at 50k blocks; no explorer API key). The 8.8B may have been burned in
-> an event I could not page through. Either way it is an **undisclosed ~88% supply
-> reduction** or stale documentation — materially relevant to anyone modelling FDV.
+At the stated **10 FT per $1** rate, 850.06M FT implies **≈ $85.0M of contributions** if
+every token is issued — still *below* the publicly claimed **$200M private round**. The
+founder's own figure is lower again: *"$50.95m in PUT backing capital"* (2026-08-10),
+consistent with issued supply only (850M − 330M configurator-held ≈ 520M FT ≈ $52M).
+
+> Method note: mint/burn history is still not reconstructable from public RPCs
+> (`eth_getLogs` capped at 50k blocks), but the founder's public statements resolve the
+> direction of the discrepancy. What remains undocumented is the *reconciliation*: no
+> official doc explains 10B → 850M.
 
 ```mermaid
 flowchart TB
-    DOC["DOCS<br/>maximum supply 10,000,000,000 FT<br/>minted at deployment<br/>no additional minting<br/>totalSupply stays at 10B"]
+    DOC["DOCS - stale<br/>maximum supply 10,000,000,000 FT<br/>minted at deployment<br/>no additional minting<br/>totalSupply stays at 10B"]
 
-    CHAIN["CHAIN - totalSupply summed over 5 EVM deployments<br/>Ethereum 1,196,643,745.86<br/>Sonic 1,979,127.96<br/>Base 16,622.64<br/>BNB Chain 241.37<br/>Avalanche 0.00"]
+    CHAIN["CHAIN - totalSupply summed over 5 EVM deployments<br/>2026-09-02: 1,198,639,737.83<br/>2026-09-20: 850,062,800.12"]
 
-    TOTAL["MEASURED TOTAL<br/>1,198,639,737.83 FT"]
+    BURN["RECONCILIATION - disclosed on X only<br/>2026-08-03: burned unallocated 9bn FT<br/>2026-08-10: 8.79bn permanently burned<br/>ongoing revenue-funded bb and burn"]
 
-    GAP["GAP: approx 8.80B FT<br/>88% of stated supply"]
+    GAP["DOCS GAP<br/>no official document explains<br/>10B to 850M"]
 
-    DOC --> TOTAL
-    CHAIN --> TOTAL
-    TOTAL --> GAP
+    RATE["Rate: 10 FT per 1 dollar<br/>850M implies approx 85M committed<br/>founder states 50.95M PUT backing<br/>both BELOW the claimed 200M round"]
 
-    GAP --> R1["Rate: 10 FT per 1 dollar"]
-    R1 --> IMP["Implies approx 119.9M of contributions"]
-    IMP --> CONTRA["Docs and press claim<br/>a 200M private round<br/>119.9M is BELOW that on its own"]
-
-    GAP --> CAV["Caveat: mint/burn history not fully reconstructed<br/>eth_getLogs capped at 50k blocks, no explorer key<br/>the 8.8B may have been burned<br/>Either way it is UNDISCLOSED"]
+    DOC --> GAP
+    CHAIN --> BURN
+    BURN --> RATE
+    CHAIN --> RATE
 
     classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
@@ -61,14 +74,14 @@ flowchart TB
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
     classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
     class DOC claim
-    class CHAIN,TOTAL,R1,IMP neutral
-    class GAP,CONTRA bad
-    class CAV warn
+    class CHAIN,BURN good
+    class RATE neutral
+    class GAP bad
 ```
 
 ### Abandoned test deployment
 `0x9B15Cce2D9C396B8B840C167374DCe873b2CcE6d` (Sonic) is in the repo's own
-`deployments/sonic-mainnet/FT.json`. Live state:
+`deployments/sonic-mainnet/FT.json`. State as of 2026-09-02 (not re-checked 2026-09-20):
 - `name()` = **"Test name"**, `symbol()` = **"Test symbol"**
 - `totalSupply()` = **9,999,995,990 FT**
 - `paused()` = **true**, `owner()` = `0xa801864d0d24686b15682261aa05d4e1e6e5bd94` (an EOA, not the multisig)
@@ -79,33 +92,32 @@ gets picked up by token trackers.
 
 ## 2. Distribution — Ethereum (99.9% of supply is here)
 
-`holdersCount` = **688**. Top holders:
+`holdersCount` = **688** (2026-09-02; not re-measured). Top holders (2026-09-20):
 
-| # | Address | Balance (FT) | Share | Identity |
+| # | Address | Balance (FT, 2026-09-20) | Share | Identity |
 |---|---|---|---|---|
-| 1 | `0x22246a9183ce2ce6e2c2a9973f94aea91435017c` | 648,033,208 | **54.15%** | **the `configurator`** (verified via `configurator()`), 3-of-4 Gnosis Safe |
-| 2 | `0xba49d0ac42f4fba4e24a8677a22218a4df75ebaa` | 428,358,985 | **35.80%** | unidentified contract (141-byte runtime; not a Safe; likely `PutManager`) |
-| 3 | `0xaec73da67132a45d93e20cddf1b8cd13e2580870` | 50,000,000 | 4.18% | unknown |
-| 4 | `0x4577286a6082df1f99adbf790c4104dd90abefbc` | 30,000,000 | 2.51% | unknown |
-| 5 | `0x4de4043a9c6990b414bdcc106f15ef8ab3300c13` | 10,000,000 | 0.84% | unknown |
+| 1 | `0x22246a9183ce2ce6e2c2a9973f94aea91435017c` | 330,000,000 | **38.95%** | the `configurator` (same address verified at first read; 648,033,208 on 2026-09-02 — its balance absorbed most of the 18-day burn) |
+| 2 | `0xba49d0ac42f4fba4e24a8677a22218a4df75ebaa` | 427,039,967 | **50.40%** | unidentified contract (141-byte runtime; not a Safe; likely `PutManager`) |
+| 3 | `0xaec73da67132a45d93e20cddf1b8cd13e2580870` | 50,000,000 | 5.90% | unknown (2026-09-02; not re-measured) |
+| 4 | `0x4577286a6082df1f99adbf790c4104dd90abefbc` | 30,000,000 | 3.54% | unknown (2026-09-02; not re-measured) |
+| 5 | `0x4de4043a9c6990b414bdcc106f15ef8ab3300c13` | 10,000,000 | 1.18% | unknown (2026-09-02; not re-measured) |
 
-**Top 2 addresses control 89.95% of supply.**
+**Top 2 addresses control 89.35% of supply** (89.95% at first read).
 
 ```mermaid
 flowchart TB
-    SUP["Total measured supply<br/>1,198,639,737 FT"]
+    SUP["Total measured supply 2026-09-20<br/>850,062,800 FT"]
 
-    SUP --> CFG["configurator Safe 0x22246a<br/>648,033,208 FT = 54.15%"]
-    SUP --> PM["unidentified contract 0xba49d0<br/>likely PutManager - 428,358,985 FT = 35.80%"]
-    SUP --> REST["remaining 684 holders<br/>121,579,326 FT = 10.14%"]
-    SUP --> FLOAT["TRADEABLE FLOAT<br/>20,668,218 FT = 1.72%"]
+    SUP --> CFG["configurator Safe 0x22246a<br/>330,000,000 FT = 38.95%<br/>was 648M before the burns"]
+    SUP --> PM["unidentified contract 0xba49d0<br/>likely PutManager - 427,039,967 FT = 50.40%"]
+    SUP --> REST["remaining holders<br/>~10% incl 50M + 30M + 10M unidentified"]
+    SUP --> FLOAT["TRADEABLE FLOAT<br/>~20.7M FT ≈ 2M dollars<br/>founder concurs: 2m mcap"]
 
-    CFG --> CFG_N["The same role that is<br/>EXEMPT FROM THE PAUSE<br/>holds over half the supply"]
+    CFG --> CFG_N["The same role that is<br/>EXEMPT FROM THE PAUSE<br/>holds 39% of supply"]
     PM --> PM_N["Closed source<br/>no public audit"]
-    REST --> REST_N["Includes 50M + 30M + 10M<br/>unidentified top-3 to top-5"]
-    FLOAT --> FLOAT_N["2.10M float market cap<br/>265K/day volume<br/>688 holders"]
+    FLOAT --> FLOAT_N["~265K/day volume<br/>688 holders"]
 
-    FLOAT_N --> PRICE["This thin float sets the price<br/>that marks the 'unlimited upside'<br/>of the other 98.28%"]
+    FLOAT_N --> PRICE["This thin float sets the price<br/>that marks the 'unlimited upside'<br/>of the other ~97%"]
 
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
@@ -114,22 +126,22 @@ flowchart TB
     class SUP,REST neutral
     class CFG,CFG_N,FLOAT,FLOAT_N,PRICE bad
     class PM,PM_N closed
-    class REST_N warn
 ```
 
-## 3. Market data (Ethereum, 2026-09-02)
+## 3. Market data (Ethereum, 2026-09-20)
 
-| Metric | Value |
-|---|---|
-| Price | **$0.10144** (≈ the $0.10 par) |
-| `availableSupply` (float) | **20,668,218 FT** |
-| Float market cap | **≈ $2.10M** |
-| Fully-diluted (1.199B × price) | **≈ $121.6M** |
-| 24h volume | **$264,564** |
-| Holders | **688** |
-| Contract created | 2025-11-17 (creator `0x44820497f8fe95a258a9522f0de2c04ab2bc3da3`) |
+| Metric | Value | As of |
+|---|---|---|
+| Price | **$0.1079** (14 pairs, DexScreener) | 2026-09-20 |
+| 24h volume | **$267,438** | 2026-09-20 |
+| `availableSupply` (float) | **20,668,218 FT** ≈ **$2.10M** — founder concurs: *"$2m mcap"* (X, 2026-09-18) | 2026-09-02 |
+| Fully-diluted (850.06M × price) | **≈ $91.7M** | 2026-09-20 |
+| Holders | **688** | 2026-09-02 |
+| Contract created | 2025-11-17 (creator `0x44820497f8fe95a258a9522f0de2c04ab2bc3da3`) | — |
 
-**FDV ≈ $121.6M vs. the $1B headline private-round valuation — roughly an 8x gap.**
+**FDV ≈ $91.7M vs. the $1B headline private-round valuation — roughly an 11x gap.**
+Note the founder's own "$48m fdv" (X, 2026-09-18) is inconsistent with market data
+(850.06M × $0.108) by about 2x, while his "$2m mcap" matches the float exactly.
 Daily volume is ~0.13% of the claimed $200M private round.
 
 ## 4. Privileged roles
@@ -138,6 +150,10 @@ Daily volume is ~0.13% of the claimed $200M private round.
 |---|---|---|---|
 | `owner()` | `0x1118e1c057211306a40A4d7006C040dbfE1370Cb` | Gnosis Safe, **3-of-5** | `setPaused`, `setName`, `setSymbol`, `transferConfigurator` |
 | `configurator()` | `0x22246a9183ce2ce6e2c2a9973f94aea91435017c` | Gnosis Safe, **3-of-4** | `setPaused`, `transferConfigurator`, **pause-bypass transfers** |
+
+Re-verified 2026-09-20: `owner()` returns `0x1118e1c0…370Cb` on **all five chains**. The
+`configurator()` read reverted on re-check, so role continuity is inferred from the #1
+holder balance at the same address rather than re-read directly.
 
 ### Signer overlap — the two roles are not independent
 
@@ -179,7 +195,7 @@ flowchart TB
     OWN --> POW_O["Powers: setPaused<br/>setName, setSymbol<br/>transferConfigurator"]
     CFG --> POW_C["Powers: setPaused<br/>transferConfigurator<br/>PAUSE-BYPASS TRANSFERS"]
 
-    CFG --> HOLD["Also holds 648,033,208 FT<br/>54.15% of supply"]
+    CFG --> HOLD["Also holds 330,000,000 FT<br/>38.95% of supply"]
 
     POW_O --> FX["Consequence<br/>The role that can freeze everyone else<br/>and the role exempt from the freeze<br/>are controlled by 4 shared keys<br/>No independent check exists"]
 
@@ -196,7 +212,8 @@ flowchart TB
 
 ## 5. Pause state
 
-`paused()` = **false** on Ethereum, BSC, Base, Avalanche and Sonic (canonical `0x5DD1…`).
+`paused()` = **false** on Ethereum, BSC, Base, Avalanche and Sonic (canonical `0x5DD1…`),
+re-verified 2026-09-20.
 
 Note the contract is **deployed paused** (`_pause()` in the constructor), so it had to
 be unpaused by an insider after the 10B premint to the configurator.

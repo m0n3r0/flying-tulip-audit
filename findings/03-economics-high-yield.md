@@ -2,7 +2,13 @@
 
 This is the economic critique. It does **not** claim Flying Tulip is a scam or is
 insolvent. It argues that the *reasoning used to justify a high yield* does not survive
-contact with the protocol's own numbers.
+contact with the protocol's own numbers — nor, as of the 2026-09-20 re-verification, with
+the founder's own public statements.
+
+**Re-verified 2026-09-20:** the ~3% ceiling, the float, the supply, and the marketed APY
+were all re-checked against live RPC, live venue data, current docs, and the founder's X
+account. Where this document previously erred, the text is corrected in place and the
+correction is marked.
 
 ---
 
@@ -15,43 +21,48 @@ The docs make two claims that cannot both be load-bearing:
 > "quickly in all conditions."
 
 > **Claim B:** Holders earn attractive returns, funded by buyback-and-burn from
-> "surplus backing capital yield" — and ftUSD is marketed at **7-8% APY**.
+> "surplus backing capital yield" — and ftUSD is marketed at **7-8% APY** (docs) /
+> **8-12% APY** (marketing site, since escalated).
 
 If Claim A is true, then the only cash flow the system can generate is **the native
 yield on a safe, unlevered, liquid portfolio**. That yield is bounded, and the docs
 publish the bound themselves:
 
-| Benchmark (docs' own table, Ethereum) | APY |
-|---|---|
-| Aave v3 USDC supply | **3.50%** |
-| Compound v3 USDC supply | **3.52%** |
-| Aave v3 USDT supply | **2.56%** |
-| Lido stETH staking | **2.55%** |
+| Benchmark (docs' own table, Ethereum) | APY | Live 2026-09-20 |
+|---|---|---|
+| Aave v3 USDC supply | **3.50%** | 3.62% (confirmed by direct `eth_call`) |
+| Compound v3 USDC supply | **3.52%** | 5.16% |
+| Aave v3 USDT supply | **2.56%** | 3.93% |
+| Lido stETH staking | **2.55%** | 2.25% (Lido's own API) |
+| Ethena sUSDe (stated venue) | — | 4.67% — off-chain leverage per W-06 |
 
 > **Yield-to-holder ≤ (yield on collateral) − (operating costs).**
 
-You cannot pay 7-8% out of a portfolio earning ~3% while preserving principal, unless
-the gap is filled by **new capital**. That is the whole argument. Everything below is a
+No stated venue has paid 7-8% **sustainably** in the last 12 months (12-mo means: Aave
+USDC 3.45%, Compound 3.59%, stETH 2.46%, sUSDe 4.29%; every >7% reading was a days-long
+utilization/funding spike). You cannot pay 7-12% out of a portfolio earning ~3-4.7%
+while preserving principal, unless the gap is filled by **new capital**, by **leverage**,
+or by **a token distribution**. That is the whole argument. Everything below is a
 consequence of it.
 
 ```mermaid
 flowchart TB
     A["CLAIM A - the safety claim<br/>Backing capital is NEVER SPENT<br/>safe, liquid, low-risk, NO-LEVERAGE<br/>so Exit-at-par is honoured<br/>quickly in all conditions"]
 
-    B["CLAIM B - the return claim<br/>Holders earn attractive yield from<br/>surplus backing capital yield<br/>ftUSD marketed at 7-8% APY"]
+    B["CLAIM B - the return claim<br/>Holders earn attractive yield from<br/>surplus backing capital yield<br/>ftUSD marketed at 7-8% docs / 8-12% site"]
 
     A --> CONS["What A actually constrains<br/>the ONLY cash flow available is the<br/>NATIVE YIELD on a safe,<br/>unlevered, liquid portfolio"]
 
-    CONS --> BOUND["And the docs publish the bound themselves<br/>Aave v3 USDC 3.50%<br/>Compound v3 USDC 3.52%<br/>Aave v3 USDT 2.56%<br/>Lido stETH 2.55%"]
+    CONS --> BOUND["The bound, re-verified live 2026-09-20<br/>Aave USDC 3.62% / Compound 5.16%<br/>Aave USDT 3.93% / stETH 2.25%<br/>sUSDe 4.67% - itself leverage<br/>no venue sustains 7-8% over 12 months"]
 
     BOUND --> IDENT["THE IDENTITY<br/>yield to holder<br/>is less than or equal to<br/>yield on collateral MINUS operating costs"]
 
-    B --> TEST{"Can 7-8% survive<br/>that identity?"}
+    B --> TEST{"Can 7-12% survive<br/>that identity?"}
     IDENT --> TEST
 
-    TEST -->|"NO"| GAP["The gap must be filled by one of:<br/>1. new capital<br/>2. other holders' principal<br/>3. a token price the issuer's own<br/>buyback sets in a 2.1M float"]
+    TEST -->|"NO"| GAP["The gap must be filled by one of:<br/>1. new capital<br/>2. other holders' principal<br/>3. leverage - founder: DN to 8x<br/>4. a treasury-discretion FT distribution<br/>whose base yield is 0"]
 
-    TEST -->|"the only way out"| ESCAPE["Break Claim A<br/>take leverage or risk<br/>which the mandate forbids"]
+    TEST -->|"the only way out"| ESCAPE["Break Claim A<br/>take leverage or risk<br/>which the mandate forbids<br/>founder admits the hedge and the risk"]
 
     classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
@@ -131,7 +142,7 @@ Three funding sources are listed. Only one is actually yield:
 | Source | Is it yield? |
 |---|---|
 | **A.** Surplus backing-capital yield | ✅ Yes — but it is the *residual after opex* |
-| **B.** Protocol revenue & fees | ⚠️ Real, but currently trivial |
+| **B.** Protocol revenue & fees | ⚠️ Real — **$143K per 30 days** (founder, 2026-08-26) — funds today's $1.2M cumulative burn |
 | **C.** Released backing capital from **Withdrawals** | ❌ **No — this is someone's principal** |
 
 Source **C** is the one that actually scales. When a holder Withdraws, the backing
@@ -166,7 +177,7 @@ flowchart TB
 
     PRIN --> ONCE["So the buyback yield is a<br/>ONE-TIME transfer per withdrawing holder<br/>NOT a recurring return"]
 
-    P5 --> BID["The buyback IS the market<br/>in a 2.1M float on 265K/day"]
+    P5 --> BID["The buyback IS the market<br/>in a 2M float on ~265K/day"]
 
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
@@ -212,7 +223,8 @@ not a recurring return.**
 ### The float maths
 
 Backing per remaining PUT holder stays at exactly $0.10 through the loop, so the loop is
-**not** dilutive — credit where due. But note what happens to float:
+**not** dilutive — credit where due (verified algebraically on re-review). But note what
+happens to float:
 
 - Holder withdraws 10,000 FT; $1,000 backing released.
 - Protocol buys at $0.15 → retires 6,667 FT.
@@ -227,29 +239,28 @@ collateral.
 
 ## W-03 — The float is far too small for the mechanism to be real
 
-Verified on-chain (2026-09-02):
-
-| Metric | Value |
-|---|---|
-| Price | $0.1014 |
-| Float (`availableSupply`) | **20,668,218 FT** |
-| **Float market cap** | **≈ $2.10M** |
-| FDV (1.199B × price) | **≈ $121.6M** |
-| 24h volume | **$264,564** |
-| Holders | **688** |
+| Metric | Value | As of |
+|---|---|---|
+| Price | $0.1079 | 2026-09-20 |
+| Float (`availableSupply`) | 20,668,218 FT | 2026-09-02 — founder concurs: *"$2m mcap"* (2026-09-18) |
+| **Float market cap** | **≈ $2.10M** | — |
+| FDV (850.06M × price) | **≈ $91.7M** | 2026-09-20 |
+| 24h volume | **$267,438** (14 pairs) | 2026-09-20 |
+| Holders | **688** | 2026-09-02 |
 
 The docs' worked example has a holder withdrawing 10,000 FT and selling at $0.15. That is
 $1,500 — fine. But:
 
-- The buyback must buy into a **$2.1M float with $265K/day of volume**. Any
+- The buyback must buy into a **$2.1M float with $267K/day of volume**. Any
   non-trivial buyback *is* the market.
 - Therefore the FT price — the thing that sets the "unlimited upside" for the
-  1.199B locked FT — is set by the issuer's own bid in a market that cannot absorb the
+  ~830M locked FT — is set by the issuer's own bid in a market that cannot absorb the
   exits it advertises.
 - The paper value of PUT holders' upside is a mark on an illiquid float. **It is not
-  realisable at scale.**
+  realisable at scale.** The founder himself caps it: *"$2m mcap $40m absolute max
+  (assuming all PUT holders withdraw FT)"* (2026-09-07).
 
-And the reverse: a $2M float with $265K daily volume is trivially manipulable in *both*
+And the reverse: a $2M float with $267K daily volume is trivially manipulable in *both*
 directions by anyone, not just the protocol.
 
 ---
@@ -261,32 +272,35 @@ directions by anyone, not just the protocol.
 > "Any **remaining** backing capital yield after the ecosystem budget is met is used for
 > continuous buyback-and-burn."
 
-Backing capital ≈ $120M (implied by 1.199B FT at 10 FT/$1).
+Backing capital ≈ **$51M** — the founder's own figure (*"$50.95m in PUT backing
+capital"*, 2026-08-10), consistent with issued supply (~520M FT at 10 FT/$1). This
+supersedes this review's earlier $120M estimate, which was derived from total supply
+and therefore too high; the true number makes the conclusion **worse**, not better:
 
 ```
-Gross carry @ 3.5%          ≈  $4.2M / yr
-Less ecosystem budget       ≈ -$4.0M / yr   (salaries, marketing, infra, ops)
+Gross carry @ 3.5%          ≈  $1.8M / yr   (even @ 4.7% incl. sUSDe: $2.4M)
+Less ecosystem budget       ≈ -$?.?M / yr   (salaries, marketing, infra, ops — first call, size undisclosed)
 ─────────────────────────────────────────
-Surplus available to burn   ≈  $0.2M / yr
+Surplus available to burn   ≈  zero to negative
 ```
 
 ```mermaid
 flowchart TB
-    BC["Backing capital approx 120M<br/>implied by 1.199B FT at 10 FT per dollar"]
+    BC["Backing capital approx 51M<br/>founder, 2026-08-10<br/>supersedes the earlier 120M estimate"]
 
-    BC --> GROSS["GROSS CARRY at 3.5%<br/>approx 4.2M per year"]
+    BC --> GROSS["GROSS CARRY at 3.5%<br/>approx 1.8M per year<br/>2.4M even at the 4.7% sUSDe-inclusive blend"]
 
-    GROSS --> W1["FIRST CALL: ecosystem budget<br/>salaries, marketing, infra, ops<br/>approx minus 4.0M per year"]
+    GROSS --> W1["FIRST CALL: ecosystem budget<br/>salaries, marketing, infra, ops<br/>size undisclosed"]
 
-    W1 --> SURPLUS["SURPLUS available to burn<br/>approx 0.2M per year"]
+    W1 --> SURPLUS["SURPLUS available to burn<br/>zero to negative"]
 
-    SURPLUS --> PCT["0.16% of the 121.6M FDV<br/>PER YEAR"]
+    SURPLUS --> PCT["Backing-yield buyback is<br/>arithmetic dead at this scale"]
 
     W1 --> ZERO["If the budget absorbs all the yield<br/>there is NO surplus<br/>no buyback from this source"]
 
     ZERO --> QUOTE["The docs concede this themselves:<br/>if the ecosystem budget consumes all<br/>the yield, there is no surplus"]
 
-    PCT --> ALT["Realistic holder yield is approx ZERO<br/>and the buyback then depends on revenue<br/>from a protocol with 265K daily volume<br/>and 688 holders"]
+    PCT --> ALT["So all distributions lean on revenue<br/>143K per 30 days - founder<br/>and on released principal - source C"]
 
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
@@ -296,76 +310,102 @@ flowchart TB
     class PCT,ZERO,QUOTE,ALT bad
 ```
 
-$0.2M/yr against a $121.6M FDV is **0.16% per year**. That is the entire yield if the
-ecosystem budget absorbs the carry — which, for a team of this profile, it plausibly
-does. The docs concede the point: *"if the ecosystem budget consumes all the yield,
-there is no surplus → no buyback from this source."*
+The docs concede the point: *"if the ecosystem budget consumes all the yield,
+there is no surplus → no buyback from this source."* On the founder's own backing
+figure, the entire yield-bearing structure cannot fund a meaningful buyback from yield
+at all — which is exactly what the observed distribution mechanism (W-05) shows:
+**reward-only FT payouts, base APY 0.**
 
-So in the realistic case, holder yield ≈ **0**, and the buyback depends on protocol
-revenue from a protocol with **$265K of daily volume and 688 holders**.
+Sensitivity (holder yield as % of FDV/yr, using the earlier $120M/$121.6M frame —
+recomputed and verified on re-review; the true frame is smaller and therefore worse):
+
+```
+carry:        2.5%    3.0%    3.5%    4.0%
+opex $2M:     0.82    1.31    1.81    2.30
+opex $3M:    -0.00    0.49    0.98    1.48
+opex $4M:    -0.83   -0.33    0.16    0.65
+opex $5M:    -1.65   -1.16   -0.66   -0.17
+```
+
+Yield exceeds 1% in only 4 of 16 cells — all requiring both low opex AND above-benchmark
+carry. To pay 7-8% on $120M you need ~$260-392M of backing at unlevered carry; on the
+founder's $51M the same rate needs the leverage he describes (W-05).
 
 ---
 
-## W-05 — The 7-8% ftUSD APY is not supported by the deployed product
+## W-05 — The 7-8% (now 8-12%) ftUSD APY is paid — but it is not a yield
+
+**Correction (2026-09-20):** an earlier version of this finding stated the 7-8% figure
+"does not appear anywhere in the documentation." That was wrong: it appears verbatim on
+`docs.flyingtulip.com/product-suite/` (and did at first read, per the 2026-06-20 Wayback
+snapshot). It is absent only from the detailed ftUSD page. Corrected here; the
+substantive critique below is unaffected and is now backed by measured payout data.
 
 | | |
 |---|---|
-| **Marketing site** | ftUSD "generates **7-8% APY** through delta-neutral strategies while maintaining a perfect $1 peg" |
-| **Docs, actual Stage 0** | "At launch, ftUSD is a **USDC/USDT to Aave wrapper**." **Only implemented strategy.** |
-| **Docs, delta-neutral** | **Stage 3+** — roadmap, not deployed |
-| **Docs, benchmark rates** | Aave USDC **3.50%**, Aave USDT **2.56%**, Compound USDC **3.52%**, Lido stETH **2.55%** |
-| **Docs, "7-8%"** | **The figure does not appear anywhere in the documentation.** |
+| **Marketing site (2026-09-20)** | ftUSD *"auto-generating **8-12% APY**"* — **escalated** from 7-8% since first read |
+| **Docs, product-suite page** | *"generates **7-8% APY** through delta-neutral strategies while maintaining a perfect $1 peg"* |
+| **Docs, ftUSD detail page (updated 2026-09-16)** | "At launch, ftUSD is a **USDC/USDT to Aave wrapper** (Stage 0)." *"**The only on-chain strategy currently implemented is stablecoin lending via Aave**."* Delta-neutral tagged roadmap |
+| **Founder, X (2026-06-17 / 09-15)** | *"Delta Neutral on Ethereum activated for ftUSD"* / *"8.68% stable now for over 6 months … pure onchain DN"* — **the docs and the founder contradict each other** |
+| **Measured (DeFiLlama, on-chain-derived, 2026-09-20)** | sftUSD earns **7.87%** (Ethereum, $1.84M TVL) / **11.36%** (Sonic, $378K), daily since 2026-05-30 — **base APY 0, 100% FT-token rewards "bought on open market"** |
 
-To get from ~3% to 7-8% you need roughly 2.5x looping. The docs describe exactly that:
+So the payout is real — stakers genuinely receive 7-12%. What is false is the *source*
+attribution: **none of it is stablecoin strategy yield.** It is FT bought on the open
+market and distributed at treasury discretion, per the docs' own mechanism.
 
-> "**Loop collateral prudently** (e.g. deposit stS back to the money market) to increase
-> safety buffers and **carry**."
+### The founder confirms the leverage and the risk
+
+> "DN scaling up, **still only 1x, safe up to 8x**." (2026-08-21)
+> "New stable invariant version will allow **looping**. At current Lend rates would be
+> **+9% per loop**." (2026-08-25)
+> "ftUSD does carry additional risk, **the yield is from the delta hedge of stETH/ETH**
+> (on ethereum or stS/S on Sonic), so you do carry the additional native asset and
+> staked asset derivative risk." (2026-09-16)
+
+A stETH/ETH delta hedge *is* a leveraged basis trade with derivative risk; "safe up to
+8x" *is* leverage; "looping" *is* leverage. The backing-capital mandate says "no
+leverage." The advertised yield, the deployed documentation, and the founder's
+description cannot all be true at once.
 
 ```mermaid
 flowchart TB
-    S0["STAGE 0 - WHAT IS LIVE<br/>ftUSD is a USDC/USDT to Aave wrapper<br/>the only implemented strategy<br/>yields approx 3.5%"]
+    CLAIM["THE CLAIMS<br/>docs: 7-8% via delta-neutral<br/>site: 8-12% auto-generated<br/>founder: no subsidies, real yield"]
 
-    NEED["MARKETED TARGET<br/>7-8% APY"]
+    PAID["THE PAYMENT - REAL<br/>sftUSD 7.87% ETH / 11.36% Sonic<br/>measured on-chain since 2026-05-30"]
 
-    S0 --> GAP["Gap to close: roughly 2x to 2.5x<br/>the available carry"]
-    NEED --> GAP
+    SRC["THE SOURCE - NOT A YIELD<br/>base APY = 0<br/>100% FT rewards bought on open market<br/>treasury discretion per the docs"]
 
-    GAP --> L1["Loop 1<br/>supply USDC, borrow S, stake to stS"]
-    L1 --> L2["Loop 2<br/>deposit stS back to the money market<br/>to increase safety buffers AND carry"]
-    L2 --> L3["Each loop adds carry<br/>and also adds leverage,<br/>liquidation risk and funding risk"]
+    CLAIM --> PAID
+    PAID --> SRC
 
-    L3 --> CONTRA["CONTRADICTION<br/>the backing capital mandate says<br/>safe, liquid, low-risk, NO-LEVERAGE"]
+    SRC --> SCALE{"Can it scale to the<br/>announced 100M caps?"}
 
-    NEED --> STAGE3["Delta-neutral is STAGE 3+<br/>a roadmap item, not deployed"]
-
-    STAGE3 --> CONTRA2["The 7-8% is either<br/>a forward-looking target<br/>or it requires leverage<br/>either way it is not live today"]
+    SCALE -->|"today: ~190K per yr payouts<br/>vs 1.7M per yr revenue"| NOW["AFFORDABLE - only because<br/>the staked base is 2.2M"]
+    SCALE -->|"at 100M: 8-12M per yr<br/>= 5-7x ALL protocol revenue"| LEVER["IMPOSSIBLE unlevered<br/>founder's own path: DN to 8x<br/>= the leverage Claim A forbids"]
 
     classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
     classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
-    class NEED claim
-    class S0,GAP,L1,L2,L3,STAGE3 neutral
-    class CONTRA,CONTRA2 bad
+    class CLAIM claim
+    class PAID,NOW good
+    class SRC,SCALE warn
+    class LEVER bad
 ```
-
-**Looping is leverage.** The backing-capital mandate says "no leverage." Either the
-7-8% requires leverage (contradicting the safety claim), or it is a forward-looking
-number for a strategy that does not exist yet.
 
 ### And the yield is paid in FT, at treasury discretion
 
 > "Stakers claim rewards as **FT** from the rewards vault."
 > "All net strategy yield and protocol fee revenue is collected by the protocol
 > treasury; then **at treasury discretion** distributed via buyback-and-distribute."
-> "Unstaked ftUSD receives no yield; proceeds accrue to the **protocol treasury**."
+> "Unstaked ftUSD receives no yield; proceeds accrue to the **protocol treasury**.**
 
-So the "7-8% stablecoin yield" is:
+So the "7-12% stablecoin yield" is:
 
 1. Paid **in the protocol's own token**, not in USD;
 2. Bought back **at the treasury's discretion**;
-3. In a market with **$265K/day** of volume.
+3. In a market with **$267K/day** of volume and a **$2.1M float** the founder himself quotes.
 
 Your realised USD return = (FT received) × (price you can exit at). **Both legs are
 controlled by the same party.** This is not a yield; it is a discretionary token
@@ -380,7 +420,10 @@ The backing venues are listed as "safe, liquid, low-risk, **no-leverage**". Two 
 **(a) sUSDe is leverage that lives off-chain.** sUSDe (Ethena) *is* a delta-neutral basis
 trade — perp funding plus staking, held at exchanges and custodians. It carries funding-rate
 risk, exchange risk, and custody risk. Classifying it under "no leverage" is true only if
-you define leverage as "on-chain borrow." The economic exposure is levered.
+you define leverage as "on-chain borrow." The economic exposure is levered. The founder's
+own description of ftUSD's yield — *"the delta hedge of stETH/ETH"* with *"additional
+native asset and staked asset derivative risk"* (2026-09-16) — concedes the same point for
+the in-house strategy.
 
 **(b) The LSTs have exit queues.** stETH, jupSOL, and AVAX staking all involve unbonding.
 The docs admit it:
@@ -491,48 +534,49 @@ unilateral discretion over the classification that triggers their own unlock.
 
 ---
 
-## W-08 — The supply disclosure gap invalidates the published FDV maths
+## W-08 — The supply documentation is stale; the gap is explained on X, not in the docs
 
-The docs say: **10,000,000,000 FT**, "minted at deployment," "no additional minting,"
-"totalSupply stays at 10B."
+**Rewritten 2026-09-20.** The docs say: **10,000,000,000 FT**, "minted at deployment,"
+"no additional minting," "totalSupply stays at 10B."
 
-On-chain across all five EVM deployments: **1,198,639,737 FT** — a gap of ~8.8B (88%).
+On-chain: **1,198,639,737 FT** at first read (2026-09-02), **850,062,800 FT** eighteen
+days later — a −29% live reduction. An earlier version of this finding flagged the 8.8B
+gap as *undisclosed*; that charge is now narrowed. The founder disclosed the
+reconciliation publicly on X: *"Burned unallocated 9bn FT bringing FDV to 100m"*
+(2026-08-03) and *"8.79bn unallocated FT permanently burned"* (2026-08-10), and burns
+have continued since (*"From bb&burn, not non-circ."*, 2026-09-17). **The facts are
+public; the documentation was never updated.** Anyone modelling from the docs alone —
+*"10B minted, no additional minting"* — is modelling a supply that does not exist and
+never did in the form described.
 
-At the stated 10 FT/$1 rate, 1.199B FT implies **≈ $119.9M committed**, which is *below*
-the claimed **$200M private round** on its own.
+At the stated 10 FT/$1 rate, 850M FT implies **≈ $85M committed** if fully issued — still
+below the claimed **$200M private round**; the founder's own PUT backing figure is
+**$50.95M** (2026-08-10). FDV on current supply and price: **≈ $91.7M** (the founder's
+"$48m fdv", 2026-09-18, matches neither — his "$2m mcap" matches the float exactly).
 
 ```mermaid
 flowchart TB
-    DOC["DOCS<br/>10,000,000,000 FT<br/>minted at deployment<br/>no additional minting<br/>totalSupply stays at 10B"]
+    DOC["DOCS - STALE<br/>10,000,000,000 FT<br/>minted at deployment<br/>no additional minting<br/>totalSupply stays at 10B"]
 
-    CHAIN["CHAIN<br/>1,198,639,737 FT<br/>summed across 5 EVM deployments"]
+    CHAIN["CHAIN - RE-VERIFIED 2026-09-20<br/>1,198,639,737 FT on 2026-09-02<br/>850,062,800 FT now - minus 29% in 18 days"]
 
-    DOC --> GAP["GAP approx 8.8B FT = 88% of stated supply"]
+    X["DISCLOSED ON X, NOT IN DOCS<br/>2026-08-03: burned unallocated 9bn<br/>2026-08-10: 8.79bn permanently burned<br/>ongoing revenue-funded bb and burn"]
+
+    DOC --> GAP["STILL TRUE<br/>no official document reconciles<br/>10B to 850M"]
     CHAIN --> GAP
+    X --> GAP
 
-    GAP --> RATE["At the stated 10 FT per dollar<br/>1.199B FT implies approx 119.9M committed"]
-    RATE --> CLAIM["Press and docs claim<br/>a 200M private round"]
-    CLAIM --> DISC["119.9M is BELOW the claimed round<br/>on its own"]
-
-    GAP --> MODEL["Anyone modelling the docs' worked example<br/>500m committed gives 5B FT allocated<br/>and 5B FT non-circulating<br/>is modelling a supply that DOES NOT EXIST"]
-
-    GAP --> CAV["CAVEAT - stated honestly<br/>mint/burn history not fully reconstructed<br/>eth_getLogs capped at 50k blocks, no explorer key<br/>the 8.8B may have been burned in an<br/>event I could not page through<br/>either way it is UNDISCLOSED"]
+    GAP --> RATE["At 10 FT per dollar:<br/>85M implied committed - below the<br/>claimed 200M round<br/>founder: 50.95M PUT backing"]
 
     classDef claim fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
     classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
-    class DOC,CLAIM claim
-    class CHAIN,RATE neutral
-    class GAP,DISC,MODEL bad
-    class CAV warn
+    class DOC claim
+    class CHAIN,X good
+    class GAP,RATE bad
 ```
-
-Anyone modelling the docs' worked example — *"$500m committed → 5B FT allocated, 5B FT
-remain non-circulating"* — is modelling a supply that does not exist. (I could not fully
-reconstruct mint/burn history: public RPCs cap `eth_getLogs` at 50k blocks and I had no
-explorer API key. The 8.8B may have been burned in an event I could not page through.
-Either way it is undisclosed.)
 
 ---
 
@@ -591,7 +635,8 @@ Being fair matters here, because the structure is more honest than most:
 - **1:1 backing that is actually ring-fenced is a real improvement** over the
   emission-funded "yield" that dominates DeFi. If they honour it, par exits are
   substantially safer than the typical farm.
-- **No inflation** is a real constraint, voluntarily accepted.
+- **No inflation** is a real constraint, voluntarily accepted — re-confirmed on
+  re-review: no mint path exists post-constructor.
 - **Revenue-linked insider unlocks** are a better alignment mechanism than time vesting,
   even with the classification problem in W-07.
 - **The perpetual put is a genuinely novel retail-protective idea**, and putting it
@@ -599,12 +644,18 @@ Being fair matters here, because the structure is more honest than most:
 - **Publishing `KNOWN_ISSUES.md`** with candid residual-risk admissions
   (PM-02 "protocol-level losses are not handled on-chain", CB-01, MKT-01) is better
   practice than most projects at this stage.
+- **The distributions themselves are real.** sftUSD stakers genuinely receive 7-12%
+  today, buybacks genuinely execute ($1.2M cumulative, supply −29% in 18 days), and the
+  founder discloses figures competitors would not (including the $2M float and the $51M
+  backing). The criticism is about *what the payout is and whether it scales*, not about
+  whether anything is happening.
 
 ---
 
 ## The one-sentence version
 
 > **If the principal is genuinely never spent and genuinely unlevered, the yield is
-> capped at the ~3% the collateral earns — so any yield materially above that is being
-> paid out of new capital, out of other holders' principal, or out of a token price that
-> the issuer's own buyback sets in a $2M float.**
+> capped at the ~3-4.7% the collateral earns — so the measured 7-12% payout is being
+> paid as a treasury-discretion FT-token distribution with a 0% organic base, at a
+> scale that works only because it is tiny, with the founder's own path to advertised
+> scale being the leverage the mandate forbids.**
