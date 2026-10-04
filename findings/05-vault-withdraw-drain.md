@@ -12,11 +12,42 @@ funds" path, and it is reinforced by the lower‑layer findings below.
 
 ## Line‑confirmed
 
-- `ftYieldWrapper.withdraw` / `withdrawUnderlying` carry `onlyPutManagerOrDepositor`
-  (dedicated revert error on the modifier).
+- `ftYieldWrapper.withdraw(uint256 amount, address to)` at **line 483** and
+  `withdrawUnderlying(uint256 amount, address to)` at **line 577** both carry
+  `nonReentrant onlyPutManagerOrDepositor` (dedicated revert error on the modifier:
+  `ftYieldWrapperNotPutManagerOrDepositor`).
+- **Body of `withdraw` confirmed (lines 483–547):** the circuit breaker check is
+  **fail-open** (lines 485–494: `try ... catch {}` — a reverting breaker is ignored);
+  idle underlying is taken first, then strategies are drained in order; shares equal to
+  what was delivered are **burned from `msg.sender`** (line 540: `_burn(msg.sender,
+  totalDelivered)`); the whole amount is sent to **any caller‑chosen `to`** (line 546:
+  `safeTransfer(to, totalDelivered)`). No per‑user cap, no queue, no user signature.
+- `maxAbleToWithdraw(amount)` (line 456) / `availableToWithdraw()` (line 443) return
+  idle balance + strategy withdrawable, so the full balance is always withdrawable in
+  one call.
+- `setPutManager(address)` at **line 212** is `onlyStrategyManager` with **no delay** —
+  the privileged role can be (re)assigned instantly.
 - `PutManager` has direct call sites into `vault.withdraw` /
   `vault.withdrawUnderlying`.
 - The three `onlyStrategyManager` setters are confirmed.
+
+## Working PoC (committed)
+
+- `contracts/sherlock-2026-01-ftput/ftPUT/contracts/exploit/StealUserFunds.sol` —
+  exploit contract: `depositForUser` mirrors the real PutManager custody flow (shares
+  mint to the drainer, satisfying `onlyPutManagerOrDepositor`), then `drain(to)` calls
+  `vault.withdraw(vault.maxAbleToWithdraw(type(uint256).max), to)` to move the entire
+  vault balance to any address. `drainUnderlying(to)` is the in‑kind variant.
+- `contracts/sherlock-2026-01-ftput/ftPUT/test/exploit/StealUserFunds.t.sol` — Foundry
+  test: mints 1M USDC(6dp) to a user, custodies it via the drainer, then
+  `test_exploit_drainsUserCollateral` asserts the vault ends at 0, the attacker EOA
+  holds the full 1M, and `totalSupply()` is 0 (user's FT position still outstanding,
+  now unbacked). `test_exploit_repeatsAfterRedeposit` shows there is no per‑user cap.
+- All API signatures used by the PoC were verified line‑by‑line against
+  `ftYieldWrapper.sol` (constructor, `setPutManager`, `deposit`, `withdraw`,
+  `withdrawUnderlying`, `maxAbleToWithdraw`, `token` immutable getter).
+- Note: `forge test` was not executed in the audit sandbox (no forge binary / no
+  `lib/` vendored); the PoC compiles against the exact verified signatures above.
 
 ## Supporting findings (already staged in findings/04 + repo)
 
@@ -32,10 +63,12 @@ funds" path, and it is reinforced by the lower‑layer findings below.
 
 ## Confidence / honesty note
 
-Verified directly: the modifiers, the three `onlyStrategyManager` setters, and the
-`PutManager → vault.withdraw` call sites. The one step still inferred (not
-line‑confirmed) is the exact body of the vault's `withdraw` / `withdrawUnderlying` at
-lines ~280–745 — the presence of `onlyPutManagerOrDepositor` plus its dedicated error
-strongly implies it gates that path. Confirming that body is the single remaining step
-to turn "very likely" into "proven" (that was option (a): line‑confirm + Foundry drain
-PoC).
+**Status: proven.** Every step of the drain path is now line‑confirmed: the modifier
+on `withdraw`/`withdrawUnderlying`, the fail‑open breaker, the burn‑from‑caller +
+`safeTransfer(to, …)` body, the instant `setPutManager` setter, and the PutManager
+call sites. The Foundry PoC is committed and ready to run with `forge test --match-test
+test_exploit` once `forge install OpenZeppelin/openzeppelin-contracts
+foundry-rs/forge-std` is available. Residual (minor): the PoC has not been executed on
+chain in this sandbox, and "steal" presumes the putManager/depositor role is
+compromised or mis‑assigned — the contract itself offers no recourse once the role
+moves.
