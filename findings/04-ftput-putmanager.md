@@ -170,7 +170,11 @@ also the beneficiary of unsold-offering FT normalisation.
 `claimQueued` (L260-267) has **no authorization**: no `onlyftYieldWrapper`, no owner
 record. Queue ids are **sequential** and the `queue` mapping is **public** → any
 bystander can enumerate ids and claim another user's queued AVAX withdrawal to
-`msg.sender`. Verified in source.
+`msg.sender`. Verified in source; **executed end-to-end** — PoC:
+`contracts/sherlock-2026-01-ftput/ftPUT/test/exploit/HyphaQueueTheft.t.sol`
+(runs the full stack through the real `ftYieldWrapper`: principal deployed into the
+strategy, exit queued, bystander claims the queued AVAX to itself; the vault's own
+claim then reverts — funds irrecoverable).
 
 > Caveat: Avalanche collateral is **not registered** on the live PutManagers checked —
 > this strategy is likely **undeployed**. Must be confirmed before a live impact claim.
