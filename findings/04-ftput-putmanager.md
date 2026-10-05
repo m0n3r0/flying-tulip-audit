@@ -176,9 +176,15 @@ bystander can enumerate ids and claim another user's queued AVAX withdrawal to
 strategy, exit queued, bystander claims the queued AVAX to itself; the vault's own
 claim then reverts — funds irrecoverable).
 
-> Caveat: Avalanche collateral is **not registered** on the live PutManagers checked —
-> this strategy is likely **undeployed**. Must be confirmed before a live impact claim.
-> Tracked as follow-up issue #8.
+> **Deployment check — resolved 2026-10-05 (issue #8).** Verified against live state
+> (read-only): the Avalanche PutManager (`0xba49d0…`, msig `0x1118e1…`) registers
+> wAVAX, and its vault (`0x9d96bac8a4E9A5b51b5b262F316C4e648E44E305`) holds exactly
+> **one strategy — an Aave strategy** (`0xE5270E04…`, "Flying Tulip Aave Wrapped
+> AVAX"; `pool()` = Aave v3 AVAX pool, position token awAVAX; all Hypha-only getters
+> revert). No other chain registers wAVAX (ETH / BSC / Base / Sonic checked), and the
+> whole Avalanche deployment is pre-offering (0 supply). **S-01 is code-level only —
+> not live-reachable as of this check.** Repeatable: `scripts/probe_avax_strategy.py`
+> → `research/probe_avax_strategy_2026-10-05.json`.
 
 ```mermaid
 flowchart TD
@@ -188,7 +194,7 @@ flowchart TD
     A -->|"no"| ENUM["queue ids are SEQUENTIAL<br/>queue mapping is PUBLIC"]
     ENUM --> THEFT["any bystander enumerates ids<br/>and claims another user's<br/>queued AVAX to msg.sender"]
     BAD --> THEFT
-    THEFT --> CAV["Caveat<br/>AVAX collateral not registered live<br/>likely undeployed - issue #8"]
+    THEFT --> CAV["Deployment check 2026-10-05<br/>wAVAX vault runs an Aave strategy<br/>Hypha not registered - issue #8 closed"]
 
     classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
@@ -196,7 +202,7 @@ flowchart TD
     classDef neutral fill:#f1f5f9,stroke:#64748b,color:#0f172a
     class Q neutral
     class A,BAD,ENUM,THEFT bad
-    class CAV warn
+    class CAV good
 ```
 
 ### execute()-guard gaming

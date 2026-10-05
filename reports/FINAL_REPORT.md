@@ -164,7 +164,7 @@ refuted. Detail in findings/04.
 
 | ID | Finding | Severity |
 |---|---|---|
-| **S-01** | `HyphaStAVAXStrategy.claimQueued` unauthenticated (L260-267) — Critical **in tree**, but in the Hypha/Lista layer and **likely undeployed** (no confirmed Avalanche rollout) | **Critical*** |
+| **S-01** | `HyphaStAVAXStrategy.claimQueued` unauthenticated (L260-267) — Critical **in tree**, but in the Hypha/Lista layer and **not deployed live** (2026-10-05 wiring check: the AVAX wAVAX vault runs an Aave strategy; Hypha unregistered on every chain — issue #8 closed) | **Critical*** |
 | **W-1** | `withdrawUnderlying` (in-kind) lacks the try/catch hardening of `withdraw` — one reverting strategy DoS-es all in-kind exits | High |
 | **O-1** | FlyingTulipOracle has **no staleness check** → stale strikes fixed at invest | High |
 | **F-04** | Oracle staleness/manipulation at invest (no validity check in PutManager) | Medium |
@@ -521,9 +521,10 @@ Rewards, 2026-09-18).
 7. Put a hard cap on queued/unbonding backing assets, and disclose the cap.
 8. **Publish the Sherlock contest #1223 findings, or commission a fresh audit** of
    post-contest drift — judging halted at ~2% and no output was ever released
-   (`report: null`).
-9. Fix `HyphaStAVAXStrategy.claimQueued` authorization (S-01) **before any Avalanche
-   deployment**.
+   (`report: null`). Drift is already concrete: live Ethereum vaults run Spark/Morpho
+   strategy types absent from the reviewed snapshot (2026-10-05 wiring check).
+9. Fix `HyphaStAVAXStrategy.claimQueued` authorization (S-01) **before deploying the
+   Hypha strategy anywhere** (not yet registered live as of the 2026-10-05 check).
 10. Add staleness checks to `FlyingTulipOracle` (O-1 / F-04).
 11. Harden `withdrawUnderlying` with the same try/catch hardening as `withdraw` (W-1).
 12. Replace first-come-first-served loss allocation with a **backstop or pro-rata

@@ -223,6 +223,7 @@ role + chain + evidence (live read or official docs).
 | Abandoned test FT | `0x9B15Cce2D9C396B8B840C167374DCe873b2CcE6d` | Sonic | In repo `deployments/sonic-mainnet/FT.json`; "Test name"/"Test symbol"; 9,999,995,990 FT; paused; owner an EOA. Stale artifact, not real supply |
 | PutManager proxy | `0xba49d0ac42f4fba4e24a8677a22218a4df75ebaa` | ETH | EIP-1167 minimal (141 bytes); impl `0x1e4e741e5f0f4f258def137e196871eddae4bf5` (19,098 bytes); msig `0x3518db98cb1fcb19e0c430b3e7f7f74b2a354707`; configurator `0x22246a…`; all 41 contest selectors present |
 | PutManager proxy (same address) | `0xba49d0…` | Sonic | impl `0x90ae2cac15f8d58a258f7b4a243657754469922a` (18,798 bytes); msig `0x1118e1c0…370Cb`; pre-offering (0 supply, sale disabled, transferable false) |
+| PutManager proxy (same address) | `0xba49d0…` | BSC / Base / AVAX | same 141-byte proxy live on all three; registries: BSC 1 (wBNB), Base 2 (USDC, WETH), AVAX 3 (USDC, wAVAX, USDT); all vaults run Aave strategies; pre-offering (2026-10-05) |
 | FlyingTulipOracle | `0xc8c895e2be9511006287ce02e51b5b198ab36793` | ETH | 2,531 bytes; `ftPerUSD()` = 1,000,000,000 on 1e8 = 10 FT/USD, issuer-pinned; oracle msig `0x1118e1c0…370Cb` |
 | Aave oracle pointer | `0x54586be62e3c3580375ae3723c145253060ca0c2` | ETH | collateral feed pointer |
 | Aave oracle pointer | `0xd63f7658c66b2934bd234d79d06aef5290734b30` | Sonic | collateral feed pointer |
@@ -268,6 +269,40 @@ collateral index = 2:
 |---|---|---|
 | USDC | `0x29219dd400f2bf60e5a23d13be72b486d4038894` | 0.99989 |
 | wS | `0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38` | 0.03440 |
+
+**Strategy wiring — all chains** (live reads 2026-10-05; machine-readable snapshot:
+`research/probe_avax_strategy_2026-10-05.json`, produced by
+`scripts/probe_avax_strategy.py`). Every vault below is pre-offering (0 supply,
+`saleEnabled = false`); Ethereum carries the funded deployment.
+
+| Chain | Collateral | Vault | Registered strategy(ies) |
+|---|---|---|---|
+| ETH | USDC | `0x095d8B8D…` | `0xcfb9d82c…` "Flying Tulip Spark USD Coin"; `0xd3d61fa4…` "Flying Tulip Morpho USD Coin" |
+| ETH | WETH | `0x9d96bac8…` | `0x3f537ef4…` "Flying Tulip Spark Wrapped Ether" |
+| ETH | USDT | `0x267dF6b6…` | `0xf20119f8…` "Flying Tulip Spark Tether USD" |
+| ETH | USDS | `0xa143a9c4…` | `0x061d7d04…` "Flying Tulip Aave USDS Stablecoin" |
+| ETH | USDtb | `0xe5270e04…` | `0x3e607766…` "Flying Tulip Aave USDtb" |
+| ETH | USDe | `0xe6880Fc9…` | `0x638a51e6…` "Flying Tulip Aave USDe" |
+| BSC | wBNB | `0x095d8B8D…` | `0x9d96bac8…` "Flying Tulip Aave Wrapped BNB" |
+| Base | USDC | `0x095d8B8D…` | `0x267dF6b6…` "Flying Tulip Aave USD Coin" |
+| Base | WETH | `0x9d96bac8…` | `0xa143a9C4…` "Flying Tulip Aave Wrapped Ether" |
+| AVAX | USDC | `0x095d8B8D…` | `0xA143a9C4…` "Flying Tulip Aave USD Coin" |
+| AVAX | wAVAX | `0x9d96bac8…` | `0xE5270E04…` "Flying Tulip Aave Wrapped AVAX" (awAVAX) |
+| AVAX | USDT | `0x267dF6b6…` | `0xe6880Fc9…` "Flying Tulip Aave TetherToken" |
+| Sonic | USDC | `0x095d8B8D…` | `0x267dF6b6…` "Flying Tulip Aave USDC" |
+| Sonic | wS | `0x9d96bac8…` | `0xa143a9C4…` "Flying Tulip Aave Wrapped Sonic" |
+
+Notes:
+
+- **HyphaStAVAXStrategy is not registered in any live vault** (its only venue would
+  be a wAVAX vault; checked all five chains) — findings/04 S-01 stays code-level,
+  follow-up issue #8 closed on this check.
+- **Addresses repeat across chains** (same deployer + nonce convention): read vaults
+  and strategies as (chain, address). E.g. `0x9d96bac8…` is the wAVAX vault on AVAX,
+  the WETH vault on Base/ETH, and the wBNB strategy on BSC.
+- Live Ethereum runs **strategy types not present in the reviewed snapshot**
+  (Spark-for-USDC/WETH/USDT, Morpho-for-USDC; the USDC vault runs two strategies) —
+  concrete post-contest drift beyond the six vendored strategy files.
 
 ## Governance topology — which Safe controls what
 
